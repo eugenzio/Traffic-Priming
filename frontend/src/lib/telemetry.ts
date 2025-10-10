@@ -13,17 +13,19 @@ async function insertBatch(rows: any[]) {
   const CHUNK = 50;
   for (let i = 0; i < rows.length; i += CHUNK) {
     const slice = rows.slice(i, i + CHUNK);
+    // IMPORTANT: no .select() here (prevents ?columns=... & read perms)
     const { error } = await supabase
       .from('trial_logs')
       .upsert(slice, {
         onConflict: 'participant_id,block_idx,trial_idx',
-        ignoreDuplicates: true
+        ignoreDuplicates: true,
+        returning: 'minimal', // minimize payload, avoid read
       });
     if (error) throw error;
   }
 }
 
-/** Call this to persist a single trial row. Falls back to offline queue on error. */
+/** Persist a single trial row; falls back to offline queue on error. */
 export async function submitToDB(row: any) {
   const payload = { ...row, created_at: row.created_at ?? new Date().toISOString() };
   try {
@@ -31,13 +33,12 @@ export async function submitToDB(row: any) {
       .from('trial_logs')
       .upsert(payload, {
         onConflict: 'participant_id,block_idx,trial_idx',
-        ignoreDuplicates: true
+        ignoreDuplicates: true,
+        returning: 'minimal',
       });
     if (error) throw error;
-  } catch (e) {
+  } catch {
     const q = loadQueue(); q.push(payload); saveQueue(q);
-    // don't throw — offline queue will flush later
-    // console.warn('[DB] queued offline. size=', q.length, e);
   }
 }
 
