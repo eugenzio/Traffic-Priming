@@ -19,7 +19,6 @@ async function insertBatch(rows: any[]) {
       .upsert(slice, {
         onConflict: 'participant_id,block_idx,trial_idx',
         ignoreDuplicates: true,
-        returning: 'minimal', // minimize payload, avoid read
       });
     if (error) throw error;
   }
@@ -29,15 +28,21 @@ async function insertBatch(rows: any[]) {
 export async function submitToDB(row: any) {
   const payload = { ...row, created_at: row.created_at ?? new Date().toISOString() };
   try {
+    // IMPORTANT: never chain .select() on writes (prevents read perms requirement)
     const { error } = await supabase
       .from('trial_logs')
       .upsert(payload, {
         onConflict: 'participant_id,block_idx,trial_idx',
         ignoreDuplicates: true,
-        returning: 'minimal',
       });
     if (error) throw error;
-  } catch {
+  } catch (e: any) {
+    // If we hit 401 or "No API key" message, make it explicit in console
+    const msg = e?.message || String(e);
+    if (/401|No API key/i.test(msg)) {
+      // eslint-disable-next-line no-console
+      console.error('[DB] 401/No API key: check .env.local (dev) or Vercel env (prod), then restart/redeploy.');
+    }
     const q = loadQueue(); q.push(payload); saveQueue(q);
   }
 }
