@@ -58,3 +58,11 @@ if (typeof window !== 'undefined') {
   window.addEventListener('online', () => { flushQueue(); });
 }
 
+if (typeof document !== 'undefined') {
+  const flushOnHide = () => { try { flushQueue(); } catch {} };
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushOnHide();
+  });
+  window.addEventListener('pagehide', flushOnHide);
+}
+
