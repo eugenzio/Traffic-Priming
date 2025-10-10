@@ -1,0 +1,60 @@
+{
+  "blocks": [
+    {
+      "prime_type": "NEUTRAL",
+      "trials": [
+        { "scene_id": "N-1", "signal": "GREEN_ARROW", "oncoming_car_ttc": 3.5, "pedestrian": "NONE", "correct": "turn_left" },
+        { "scene_id": "N-2", "signal": "NO_LEFT_TURN", "oncoming_car_ttc": 2.0, "pedestrian": "NONE", "correct": "wait" },
+        { "scene_id": "N-3", "signal": "YELLOW_FLASH", "oncoming_car_ttc": 1.4, "pedestrian": "CROSSING", "correct": "wait" }
+      ]
+    },
+    {
+      "prime_type": "VISUAL_SCHEMA",
+      "trials": [
+        { "scene_id": "VS-1", "signal": "GREEN_ARROW", "oncoming_car_ttc": 3.0, "pedestrian": "NONE", "correct": "turn_left" },
+        { "scene_id": "VS-2", "signal": "GREEN_ARROW", "oncoming_car_ttc": 1.0, "pedestrian": "NONE", "correct": "wait" },
+        { "scene_id": "VS-3", "signal": "GREEN_ARROW", "oncoming_car_ttc": 2.0, "pedestrian": "CROSSING", "correct": "wait" }
+      ]
+    },
+    {
+      "prime_type": "VISUAL_PEDESTRIAN",
+      "trials": [
+        { "scene_id": "VP-1", "signal": "GREEN_ARROW", "oncoming_car_ttc": 3.2, "pedestrian": "NONE", "correct": "turn_left" },
+        { "scene_id": "VP-2", "signal": "YELLOW_FLASH", "oncoming_car_ttc": 2.5, "pedestrian": "CROSSING", "correct": "wait" },
+        { "scene_id": "VP-3", "signal": "GREEN_ARROW", "oncoming_car_ttc": 1.8, "pedestrian": "CROSSING", "correct": "wait" }
+      ]
+    },
+    {
+      "prime_type": "VISUAL_TTC",
+      "trials": [
+        { "scene_id": "VT-1", "signal": "YELLOW_FLASH", "oncoming_car_ttc": 2.5, "pedestrian": "NONE", "correct": "turn_left" },
+        { "scene_id": "VT-2", "signal": "GREEN_ARROW", "oncoming_car_ttc": 0.9, "pedestrian": "NONE", "correct": "wait" },
+        { "scene_id": "VT-3", "signal": "GREEN_ARROW", "oncoming_car_ttc": 1.2, "pedestrian": "NONE", "correct": "wait" }
+      ]
+    },
+    {
+      "prime_type": "VISUAL_SIGNAL",
+      "trials": [
+        { "scene_id": "VG-1", "signal": "GREEN_ARROW", "oncoming_car_ttc": 2.8, "pedestrian": "NONE", "correct": "turn_left" },
+        { "scene_id": "VG-2", "signal": "RED", "oncoming_car_ttc": 5.0, "pedestrian": "NONE", "correct": "wait" },
+        { "scene_id": "VG-3", "signal": "NO_LEFT_TURN", "oncoming_car_ttc": 3.5, "pedestrian": "NONE", "correct": "wait" }
+      ]
+    },
+    {
+      "prime_type": "VISUAL_SPOTLIGHT",
+      "trials": [
+        { "scene_id": "VL-1", "signal": "GREEN_ARROW", "oncoming_car_ttc": 2.7, "pedestrian": "NONE", "correct": "turn_left" },
+        { "scene_id": "VL-2", "signal": "YELLOW_FLASH", "oncoming_car_ttc": 2.0, "pedestrian": "CROSSING", "correct": "wait" },
+        { "scene_id": "VL-3", "signal": "GREEN_ARROW", "oncoming_car_ttc": 1.8, "pedestrian": "CROSSING", "correct": "wait" }
+      ]
+    },
+    {
+      "prime_type": "VISUAL_NORM",
+      "trials": [
+        { "scene_id": "VN-1", "signal": "GREEN_ARROW", "oncoming_car_ttc": 3.1, "pedestrian": "NONE", "correct": "turn_left" },
+        { "scene_id": "VN-2", "signal": "GREEN_ARROW", "oncoming_car_ttc": 1.1, "pedestrian": "NONE", "correct": "wait" },
+        { "scene_id": "VN-3", "signal": "YELLOW_FLASH", "oncoming_car_ttc": 1.3, "pedestrian": "CROSSING", "correct": "wait" }
+      ]
+    }
+  ]
+}
