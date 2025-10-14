@@ -15,7 +15,7 @@ interface CanvasRendererProps {
 
 // --- DARK THEME HELPERS ---
 
-// 1) Inject dark theme CSS once
+// 1) Inject dark theme CSS once with enhanced tokens for visibility
 function ensureCanvasDarkStyles() {
   if (document.getElementById('canvas-dark-styles')) return;
   const style = document.createElement('style');
@@ -39,6 +39,16 @@ function ensureCanvasDarkStyles() {
     --halo-green: rgba(52,211,153,0.5);
     --car-urgent: #ef4444;
     --car-safe: #60a5fa;
+    
+    /* Enhanced visibility tokens */
+    --lens-size: 60px;          /* Traffic light lens diameter */
+    --lens-stroke: 2px;         /* Dark stroke width */
+    --glow-intensity: 24px;     /* Soft glow blur radius */
+    --ego-scale: 1.4;           /* Ego car scale factor */
+    --ego-offset: 12%;          /* Ego car vertical offset */
+    --badge-gap: 20px;          /* TTC badge gap from ego car */
+    --contrast-ratio: 3.1;      /* Minimum contrast ratio */
+    --vignette-opacity: 0.15;   /* Subtle vignette for focus */
   }
   `;
   document.head.appendChild(style);
@@ -147,13 +157,21 @@ const HUD = {
 };
 
 // 4) Ego + path overlay component
-function LeftTurnAffordance({ showPath = true }: { showPath?: boolean }) {
+function LeftTurnAffordance({ showPath = true, canvasHeight = 450 }: { showPath?: boolean; canvasHeight?: number }) {
+  // Move ego car up by 12% of canvas height and scale by 1.4x
+  const moveUpBy = canvasHeight * 0.12; // 12% of canvas height
+  const scale = 1.4;
+  
   return (
-    <div aria-label="Your vehicle position" style={{ position:'absolute', left: 24, bottom: 32 }}>
-      {/* Ego car marker */}
+    <div aria-label="Your vehicle position" style={{ 
+      position:'absolute', 
+      left: 24, 
+      bottom: 32 + moveUpBy // Move up by 12% of canvas height
+    }}>
+      {/* Ego car marker - scaled by 1.4x */}
       <div style={{ 
-        width: 24, 
-        height: 36, 
+        width: 24 * scale, // 33.6px
+        height: 36 * scale, // 50.4px
         background:'#1f2937', 
         borderRadius: 6, 
         boxShadow:'0 0 0 3px #fff, 0 2px 8px rgba(0,0,0,0.3)',
@@ -164,14 +182,14 @@ function LeftTurnAffordance({ showPath = true }: { showPath?: boolean }) {
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          width: 16,
-          height: 20,
+          width: 16 * scale, // 22.4px
+          height: 20 * scale, // 28px
           background: '#10b981',
           borderRadius: 3
         }} />
       </div>
-      {/* Left turn path */}
-      {showPath && (
+      {/* Left turn path - deprecated: do not render the LEFT widget group */}
+      {false && showPath && (
         <svg width="140" height="100" style={{ position:'absolute', left: 12, bottom: 0, pointerEvents: 'none' }}>
           <defs>
             <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
@@ -282,6 +300,9 @@ export default function CanvasRenderer({
     // Draw crosswalk (bright but not glaring) - respects safe bounds
     drawCrosswalk(ctx, width, height, colors, B)
 
+    // Add subtle vignette/spotlight to guide attention (nice-to-have)
+    drawAttentionVignette(ctx, width, height, colors, B, normalizedSignal)
+
   }, [trial, width, height, normalizedSignal, B.x, B.y, B.w, B.h])
 
   const drawIntersection = (ctx: CanvasRenderingContext2D, w: number, h: number, colors: any, bounds: Bounds) => {
@@ -346,7 +367,7 @@ export default function CanvasRenderer({
     const x = sigClamped.x + SIG_W/2; // Center X
     const y = sigClamped.y + 20; // Y for signal top
     
-    const radius = 18 // Slightly larger
+    const radius = 30 // Increased to 60px diameter (30px radius)
 
     // Traffic light pole (dark slate)
     ctx.strokeStyle = colors?.signalBody || '#0f172a'
@@ -356,20 +377,20 @@ export default function CanvasRenderer({
     ctx.lineTo(x, y - 20)
     ctx.stroke()
 
-    // Traffic light box (very dark housing)
+    // Traffic light box (very dark housing) - enlarged for 60px lens
     ctx.fillStyle = colors?.signalBody || '#0f172a'
     ctx.shadowColor = 'rgba(0,0,0,0.6)'
     ctx.shadowBlur = 6
     ctx.shadowOffsetY = 2
-    ctx.fillRect(x - 22, y - 22, 44, 88)
+    ctx.fillRect(x - 35, y - 35, 70, 140) // Enlarged housing for 60px lens
     ctx.shadowBlur = 0
     ctx.shadowOffsetY = 0
 
-    // Light circles
+    // Light circles - repositioned for larger lens
     const lights = [
-      { color: '#ff0000', y: y - 10 }, // Red
-      { color: '#ffff00', y: y + 10 }, // Yellow
-      { color: '#00ff00', y: y + 30 }  // Green
+      { color: '#ff0000', y: y - 15 }, // Red
+      { color: '#ffff00', y: y + 5 }, // Yellow
+      { color: '#00ff00', y: y + 25 }  // Green
     ]
 
     lights.forEach((light, index) => {
@@ -384,15 +405,15 @@ export default function CanvasRenderer({
       ctx.arc(x, light.y, radius, 0, 2 * Math.PI)
 
       if (isActive) {
-        // Active lens - bright with glow halo
+        // Active lens - bright with enhanced glow and dark stroke
         const themeColor = index === 0 ? colors?.signalRed : 
                           index === 1 ? colors?.signalYellow : 
                           colors?.signalGreen;
-        ctx.fillStyle = themeColor || light.color
         
-        // Outer glow/halo
+        // Outer soft glow/halo
         ctx.shadowColor = themeColor || light.color
-        ctx.shadowBlur = 16
+        ctx.shadowBlur = 24 // Increased glow for better visibility
+        ctx.fillStyle = themeColor || light.color
         ctx.fill()
         
         // Inner bright fill
@@ -400,9 +421,9 @@ export default function CanvasRenderer({
         ctx.fillStyle = themeColor || light.color
         ctx.fill()
         
-        // Subtle outline for definition
-        ctx.strokeStyle = 'rgba(255,255,255,0.2)'
-        ctx.lineWidth = 1.5
+        // 2px dark stroke for contrast
+        ctx.strokeStyle = '#1a1a1a'
+        ctx.lineWidth = 2
         ctx.stroke()
       } else {
         // Inactive lens - dark
@@ -414,24 +435,24 @@ export default function CanvasRenderer({
       }
     })
 
-    // Draw arrow for green arrow signal (shape + color + glow)
+    // Draw white arrow glyph inside green arrow signal
     if (signal === 'GREEN_ARROW') {
-      const arrowColor = colors?.signalGreen || '#34d399'
-      ctx.fillStyle = arrowColor
-      ctx.shadowColor = arrowColor
-      ctx.shadowBlur = 14
-      ctx.font = 'bold 28px Arial'
+      // White arrow glyph inside the green lens
+      ctx.fillStyle = '#ffffff'
+      ctx.shadowColor = 'rgba(0,0,0,0.3)'
+      ctx.shadowBlur = 2
+      ctx.font = 'bold 24px Arial'
       ctx.textAlign = 'center'
-      ctx.fillText('←', x, y + 54)
+      ctx.fillText('←', x, y + 30) // Positioned in center of green lens
       ctx.shadowBlur = 0
       
-      // Arrow label
-      ctx.font = '10px Arial'
+      // Arrow label - keep at 12px as requested
+      ctx.font = '12px Arial'
       ctx.fillStyle = colors?.text || '#e5e7eb'
-      ctx.fillText('ARROW', x, y + 70)
+      ctx.fillText('ARROW', x, y + 50) // Positioned under the lens
     }
 
-    // Draw "No Left Turn" sign (red ring + prohibition symbol + 🚫)
+    // Draw "No Left Turn" sign (red ring + prohibition symbol) - updated for larger lens
     if (signal === 'NO_LEFT_TURN') {
       const redColor = colors?.signalRed || '#f87171'
       ctx.strokeStyle = redColor
@@ -439,13 +460,13 @@ export default function CanvasRenderer({
       ctx.shadowBlur = 12
       ctx.lineWidth = 3.5
       ctx.beginPath()
-      ctx.arc(x, y + 54, 20, 0, 2 * Math.PI)
+      ctx.arc(x, y + 30, 25, 0, 2 * Math.PI) // Larger ring for 60px lens
       ctx.stroke()
       
       // Diagonal slash
       ctx.beginPath()
-      ctx.moveTo(x - 14, y + 40)
-      ctx.lineTo(x + 14, y + 68)
+      ctx.moveTo(x - 18, y + 15)
+      ctx.lineTo(x + 18, y + 45)
       ctx.stroke()
       ctx.shadowBlur = 0
       
@@ -453,7 +474,7 @@ export default function CanvasRenderer({
       ctx.fillStyle = redColor
       ctx.font = 'bold 9px Arial'
       ctx.textAlign = 'center'
-      ctx.fillText('NO LEFT', x, y + 82)
+      ctx.fillText('NO LEFT', x, y + 60)
     }
   }
 
@@ -602,6 +623,22 @@ export default function CanvasRenderer({
     });
   }
 
+  const drawAttentionVignette = (ctx: CanvasRenderingContext2D, w: number, h: number, colors: any, bounds: Bounds, signal: string) => {
+    // Subtle radial gradient to guide attention to active signal and conflict area
+    const centerX = bounds.x + bounds.w * 0.35; // Traffic light area
+    const centerY = bounds.y + bounds.h * 0.3;
+    const radius = Math.min(bounds.w, bounds.h) * 0.4;
+    
+    // Create radial gradient
+    const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+    gradient.addColorStop(0, 'rgba(255,255,255,0.02)'); // Very subtle center highlight
+    gradient.addColorStop(0.7, 'rgba(0,0,0,0.05)'); // Slight darkening
+    gradient.addColorStop(1, 'rgba(0,0,0,0.15)'); // More pronounced edge darkening
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
+  }
+
   return (
     <div 
       ref={wrapperRef}
@@ -626,16 +663,16 @@ export default function CanvasRenderer({
       />
       
       {/* Ego vehicle + left-turn path overlay */}
-      <LeftTurnAffordance showPath />
+      <LeftTurnAffordance showPath canvasHeight={height} />
       
       {/* Motion chevrons (show if car is approaching quickly) */}
       <MotionChevrons x={carX} y={carY} visible={urgency > 0.2} />
       
-      {/* TTC badge near oncoming car (dark chip, light text) - clamped to bounds */}
+      {/* TTC badge near oncoming car (dark chip, light text) - clamped to bounds and positioned to avoid ego car */}
       <div style={{ 
         ...HUD.badge, 
         position:'absolute', 
-        left: Math.max(B.x, Math.min(carX + 22, B.x + B.w - 90)), // Clamp horizontally (badge width ~86px)
+        left: Math.max(B.x + 80, Math.min(carX + 22, B.x + B.w - 90)), // Ensure 16-20px gap from ego car (left: 24 + 50.4px + 20px = ~94px)
         top: Math.max(B.y, Math.min(carY - 30, B.y + B.h - 32)), // Clamp vertically (badge height ~28px)
         background: '#111827',
         color: '#e5e7eb',

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { CONFIG } from '../config'
+import { CONFIG, PRIME_COPY } from '../config'
 import type { PrimeType } from '../types'
 import { getVisualPrimeCopy } from '../utils/primeCopy'
 
@@ -47,8 +47,21 @@ export default function PrimeScreen({
     return () => clearInterval(interval)
   }, [])
 
-  const copy = getVisualPrimeCopy(primeType)
+  // Use new PRIME_COPY map for improved visibility and layout
+  const getPrimeCopy = (primeType: PrimeType) => {
+    // Map prime types to new PRIME_COPY keys
+    const primeMap: Record<string, keyof typeof PRIME_COPY> = {
+      'VISUAL_PEDESTRIAN': 'PEDESTRIAN_FIRST',
+      'VISUAL_SIGNAL': 'PROTECTED_ARROW', // Assuming green arrow case
+      'VISUAL_TTC': 'GAP_RISK',
+      'VISUAL_YELLOW': 'YELLOW_FLASH'
+    };
+    
+    const copyKey = primeMap[primeType] || 'PEDESTRIAN_FIRST';
+    return PRIME_COPY[copyKey];
+  };
 
+  const copy = getPrimeCopy(primeType);
 
   return (
     <div
@@ -64,10 +77,14 @@ export default function PrimeScreen({
       <div>
         <div className="prime-eyebrow" aria-hidden="true" style={{ fontSize: 18, opacity: 0.8, marginBottom: 8 }}>Visual Prime</div>
         {copy.title && <h2 className="prime-title" style={{ fontSize: 28, margin: 0 }}>{copy.title}</h2>}
-        {copy.subtitle && <p className="prime-subtitle" style={{ fontSize: 18, marginTop: 8 }}>{copy.subtitle}</p>}
         {copy.bullets?.length ? (
-          <ul style={{ textAlign: 'left', maxWidth: 620, margin: '12px auto', fontSize: 16 }}>
-            {copy.bullets.map((b, i) => <li key={i}>{b}</li>)}
+          <ul style={{ textAlign: 'left', maxWidth: 620, margin: '12px auto', fontSize: 16, listStyle: 'none', padding: 0 }}>
+            {copy.bullets.slice(0, 2).map((b, i) => (
+              <li key={i} style={{ marginBottom: 8, position: 'relative', paddingLeft: 20 }}>
+                <span style={{ position: 'absolute', left: 0, color: '#10b981' }}>•</span>
+                {b}
+              </li>
+            ))}
           </ul>
         ) : null}
         <div style={{ marginTop: 20, fontVariantNumeric: 'tabular-nums', opacity: 0.7 }}>
