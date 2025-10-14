@@ -1,14 +1,738 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { CONFIG } from '../config'
 import type { Trial } from '../types'
 
 type Bounds = { x: number; y: number; w: number; h: number };
+
+// === NEW INTERSECTION LAYOUT TYPES ===
+interface LaneGeometry {
+  name: 'NORTH' | 'SOUTH' | 'EAST' | 'WEST'
+  centerLine: { x: number; y: number }
+  width: number
+  startPoint: { x: number; y: number }
+  endPoint: { x: number; y: number }
+  direction: 'horizontal' | 'vertical'
+  bounds: { x: number; y: number; width: number; height: number }
+}
+
+interface CrosswalkRegion {
+  id: string
+  centerX: number
+  centerY: number
+  width: number
+  height: number
+  angle: number
+  bounds: { x: number; y: number; width: number; height: number }
+}
+
+interface IntersectionLayout {
+  centerX: number
+  centerY: number
+  roadWidth: number
+  laneWidth: number
+  lanes: Map<string, LaneGeometry>
+  crosswalks: CrosswalkRegion[]
+  bounds: Bounds
+  grassBounds: { x: number; y: number; width: number; height: number }[]
+}
+
+interface VehiclePosition {
+  laneId: string
+  distanceAlongLane: number
+  x: number
+  y: number
+  urgency: number
+  angle: number
+}
+
+interface PedestrianState {
+  isOnCrosswalk: boolean
+  crosswalkId: string
+  progress: number // 0-1 progress along crossing
+  x: number
+  y: number
+}
 
 interface CanvasRendererProps {
   trial: Trial
   width?: number
   height?: number
   safeBounds?: Bounds
+}
+
+// === INTERSECTION CONFIGURATION ===
+const INTERSECTION_CONFIG = {
+  ROAD_WIDTH_RATIO: 0.3,      // Road width as % of canvas (reduced for grass areas)
+  LANE_COUNT: 2,              // Lanes per direction
+  VEHICLE_WIDTH: 50,          // Increased from 40 to 50
+  VEHICLE_HEIGHT: 30,         // Increased from 24 to 30
+  PEDESTRIAN_RADIUS: 8,
+  CROSSWALK_WIDTH: 60,        // Reduced crosswalk width
+  CROSSWALK_HEIGHT: 12,       // Reduced crosswalk height
+  TTC_MAX: 5,
+  TTC_MIN: 0.5,
+  URGENCY_THRESHOLD: 0.5,
+  GRASS_MARGIN: 0.15,         // Increased grass area around roads
+  LANE_EXTENSION: 50          // How far lanes extend beyond intersection
+} as const;
+
+const LANE_CONFIG = {
+  NORTH: { direction: 'south' as const, zIndex: 2, color: '#ddd' },
+  SOUTH: { direction: 'north' as const, zIndex: 1, color: '#ddd' },
+  EAST: { direction: 'west' as const, zIndex: 3, color: '#ddd' },
+  WEST: { direction: 'east' as const, zIndex: 1, color: '#aaa' }
+} as const;
+
+// === LAYOUT UTILITY FUNCTIONS ===
+
+/**
+ * Initialize intersection layout with proper lane geometry
+ */
+function initializeIntersectionLayout(canvasWidth: number, canvasHeight: number, safeBounds: Bounds): IntersectionLayout {
+  const centerX = safeBounds.x + safeBounds.w / 2;
+  const centerY = safeBounds.y + safeBounds.h / 2;
+  const roadWidth = Math.min(safeBounds.w, safeBounds.h) * INTERSECTION_CONFIG.ROAD_WIDTH_RATIO;
+  const laneWidth = roadWidth / INTERSECTION_CONFIG.LANE_COUNT;
+  
+  const lanes = new Map<string, LaneGeometry>();
+  
+  // Calculate lane geometries
+  lanes.set('NORTH', calculateLaneGeometry(centerX, centerY, roadWidth, laneWidth, 'NORTH'));
+  lanes.set('SOUTH', calculateLaneGeometry(centerX, centerY, roadWidth, laneWidth, 'SOUTH'));
+  lanes.set('EAST', calculateLaneGeometry(centerX, centerY, roadWidth, laneWidth, 'EAST'));
+  lanes.set('WEST', calculateLaneGeometry(centerX, centerY, roadWidth, laneWidth, 'WEST'));
+  
+  // Calculate crosswalks
+  const crosswalks = calculateCrosswalkRegions(centerX, centerY, roadWidth, laneWidth);
+  
+  // Calculate grass areas (4 corners)
+  const grassBounds = calculateGrassBounds(centerX, centerY, roadWidth, safeBounds);
+  
+  return {
+    centerX,
+    centerY,
+    roadWidth,
+    laneWidth,
+    lanes,
+    crosswalks,
+    bounds: safeBounds,
+    grassBounds
+  };
+}
+
+/**
+ * Calculate geometry for a specific lane
+ */
+function calculateLaneGeometry(centerX: number, centerY: number, roadWidth: number, laneWidth: number, laneName: string): LaneGeometry {
+  const halfRoad = roadWidth / 2;
+  const halfLane = laneWidth / 2;
+  const extension = INTERSECTION_CONFIG.LANE_EXTENSION; // Reduced from 100 to 50
+  
+  switch (laneName) {
+    case 'NORTH':
+      return {
+        name: 'NORTH',
+        centerLine: { x: centerX, y: centerY - halfRoad },
+        width: laneWidth,
+        startPoint: { x: centerX, y: centerY - halfRoad - extension },
+        endPoint: { x: centerX, y: centerY - halfRoad },
+        direction: 'vertical',
+        bounds: { x: centerX - halfLane, y: centerY - halfRoad - extension, width: laneWidth, height: extension }
+      };
+    case 'SOUTH':
+      return {
+        name: 'SOUTH',
+        centerLine: { x: centerX, y: centerY + halfRoad },
+        width: laneWidth,
+        startPoint: { x: centerX, y: centerY + halfRoad },
+        endPoint: { x: centerX, y: centerY + halfRoad + extension },
+        direction: 'vertical',
+        bounds: { x: centerX - halfLane, y: centerY + halfRoad, width: laneWidth, height: extension }
+      };
+    case 'EAST':
+      return {
+        name: 'EAST',
+        centerLine: { x: centerX + halfRoad, y: centerY },
+        width: laneWidth,
+        startPoint: { x: centerX + halfRoad + extension, y: centerY },
+        endPoint: { x: centerX + halfRoad, y: centerY },
+        direction: 'horizontal',
+        bounds: { x: centerX + halfRoad, y: centerY - halfLane, width: extension, height: laneWidth }
+      };
+    case 'WEST':
+      return {
+        name: 'WEST',
+        centerLine: { x: centerX - halfRoad, y: centerY },
+        width: laneWidth,
+        startPoint: { x: centerX - halfRoad - extension, y: centerY },
+        endPoint: { x: centerX - halfRoad, y: centerY },
+        direction: 'horizontal',
+        bounds: { x: centerX - halfRoad - extension, y: centerY - halfLane, width: extension, height: laneWidth }
+      };
+    default:
+      throw new Error(`Unknown lane: ${laneName}`);
+  }
+}
+
+/**
+ * Calculate crosswalk regions
+ */
+function calculateCrosswalkRegions(centerX: number, centerY: number, roadWidth: number, laneWidth: number): CrosswalkRegion[] {
+  const halfRoad = roadWidth / 2;
+  const crosswalkWidth = INTERSECTION_CONFIG.CROSSWALK_WIDTH;
+  const crosswalkHeight = INTERSECTION_CONFIG.CROSSWALK_HEIGHT;
+  
+  return [
+    {
+      id: 'north',
+      centerX,
+      centerY: centerY - halfRoad,
+      width: crosswalkWidth,
+      height: crosswalkHeight,
+      angle: 0,
+      bounds: { x: centerX - crosswalkWidth/2, y: centerY - halfRoad - crosswalkHeight/2, width: crosswalkWidth, height: crosswalkHeight }
+    },
+    {
+      id: 'south',
+      centerX,
+      centerY: centerY + halfRoad,
+      width: crosswalkWidth,
+      height: crosswalkHeight,
+      angle: 0,
+      bounds: { x: centerX - crosswalkWidth/2, y: centerY + halfRoad - crosswalkHeight/2, width: crosswalkWidth, height: crosswalkHeight }
+    },
+    {
+      id: 'east',
+      centerX: centerX + halfRoad,
+      centerY,
+      width: crosswalkHeight,
+      height: crosswalkWidth,
+      angle: 90,
+      bounds: { x: centerX + halfRoad - crosswalkHeight/2, y: centerY - crosswalkWidth/2, width: crosswalkHeight, height: crosswalkWidth }
+    },
+    {
+      id: 'west',
+      centerX: centerX - halfRoad,
+      centerY,
+      width: crosswalkHeight,
+      height: crosswalkWidth,
+      angle: 90,
+      bounds: { x: centerX - halfRoad - crosswalkHeight/2, y: centerY - crosswalkWidth/2, width: crosswalkHeight, height: crosswalkWidth }
+    }
+  ];
+}
+
+/**
+ * Calculate grass area bounds (4 corners)
+ */
+function calculateGrassBounds(centerX: number, centerY: number, roadWidth: number, safeBounds: Bounds) {
+  const halfRoad = roadWidth / 2;
+  const margin = INTERSECTION_CONFIG.GRASS_MARGIN * Math.min(safeBounds.w, safeBounds.h);
+  
+  return [
+    // Top-left corner
+    { x: safeBounds.x, y: safeBounds.y, width: centerX - halfRoad - safeBounds.x, height: centerY - halfRoad - safeBounds.y },
+    // Top-right corner
+    { x: centerX + halfRoad, y: safeBounds.y, width: safeBounds.x + safeBounds.w - (centerX + halfRoad), height: centerY - halfRoad - safeBounds.y },
+    // Bottom-left corner
+    { x: safeBounds.x, y: centerY + halfRoad, width: centerX - halfRoad - safeBounds.x, height: safeBounds.y + safeBounds.h - (centerY + halfRoad) },
+    // Bottom-right corner
+    { x: centerX + halfRoad, y: centerY + halfRoad, width: safeBounds.x + safeBounds.w - (centerX + halfRoad), height: safeBounds.y + safeBounds.h - (centerY + halfRoad) }
+  ];
+}
+
+// === VEHICLE POSITIONING SYSTEM ===
+
+/**
+ * Calculate oncoming car position based on TTC in EAST lane
+ */
+function calculateOncomingCarPosition(layout: IntersectionLayout, ttc: number): VehiclePosition {
+  const eastLane = layout.lanes.get('EAST')!;
+  const urgency = Math.max(0, Math.min(1, (CONFIG.TTC_THRESHOLD_SEC - ttc) / CONFIG.TTC_THRESHOLD_SEC));
+  
+  // Distance along lane (0 = at intersection, 1 = far away)
+  const maxDistance = INTERSECTION_CONFIG.LANE_EXTENSION * 0.8; // Use 80% of lane length
+  const minDistance = 10;  // minimum distance from intersection
+  const distanceAlongLane = minDistance + (1 - urgency) * (maxDistance - minDistance);
+  
+  // Calculate position along lane centerline
+  const laneLength = Math.hypot(
+    eastLane.endPoint.x - eastLane.startPoint.x,
+    eastLane.endPoint.y - eastLane.startPoint.y
+  );
+  const progress = Math.min(0.95, distanceAlongLane / laneLength); // Cap at 95% to prevent overflow
+  
+  const x = eastLane.startPoint.x + (eastLane.endPoint.x - eastLane.startPoint.x) * progress;
+  const y = eastLane.startPoint.y + (eastLane.endPoint.y - eastLane.startPoint.y) * progress;
+  
+  // Calculate angle based on lane direction
+  const angle = Math.atan2(eastLane.endPoint.y - eastLane.startPoint.y, eastLane.endPoint.x - eastLane.startPoint.x);
+  
+  return {
+    laneId: 'EAST',
+    distanceAlongLane: distanceAlongLane,
+    x,
+    y,
+    urgency,
+    angle
+  };
+}
+
+/**
+ * Calculate ego car position in WEST lane (for left turn)
+ */
+function calculateEgoCarPosition(layout: IntersectionLayout): VehiclePosition {
+  const westLane = layout.lanes.get('WEST')!;
+  
+  // Position ego car at intersection edge for left turn
+  const distanceFromIntersection = 30; // pixels from intersection center
+  const laneLength = Math.hypot(
+    westLane.endPoint.x - westLane.startPoint.x,
+    westLane.endPoint.y - westLane.startPoint.y
+  );
+  const progress = Math.min(1, distanceFromIntersection / laneLength);
+  
+  const x = westLane.startPoint.x + (westLane.endPoint.x - westLane.startPoint.x) * progress;
+  const y = westLane.startPoint.y + (westLane.endPoint.y - westLane.startPoint.y) * progress;
+  
+  const angle = Math.atan2(westLane.endPoint.y - westLane.startPoint.y, westLane.endPoint.x - westLane.startPoint.x);
+  
+  return {
+    laneId: 'WEST',
+    distanceAlongLane: distanceFromIntersection,
+    x,
+    y,
+    urgency: 0,
+    angle
+  };
+}
+
+/**
+ * Get position along lane centerline
+ */
+function getPositionAlongLane(lane: LaneGeometry, distance: number): { x: number; y: number } {
+  const laneLength = Math.hypot(
+    lane.endPoint.x - lane.startPoint.x,
+    lane.endPoint.y - lane.startPoint.y
+  );
+  const progress = Math.min(1, distance / laneLength);
+  
+  return {
+    x: lane.startPoint.x + (lane.endPoint.x - lane.startPoint.x) * progress,
+    y: lane.startPoint.y + (lane.endPoint.y - lane.startPoint.y) * progress
+  };
+}
+
+// === PEDESTRIAN POSITIONING SYSTEM ===
+
+/**
+ * Calculate pedestrian position based on crossing state
+ */
+function calculatePedestrianPosition(layout: IntersectionLayout, isCrossing: boolean, crosswalkId: string = 'north'): PedestrianState {
+  if (!isCrossing) {
+    // Position pedestrian waiting at crosswalk edge
+    const crosswalk = layout.crosswalks.find(cw => cw.id === crosswalkId);
+    if (!crosswalk) {
+      return { isOnCrosswalk: false, crosswalkId, progress: 0, x: 0, y: 0 };
+    }
+    
+    // Position at crosswalk edge (waiting)
+    return {
+      isOnCrosswalk: false,
+      crosswalkId,
+      progress: 0,
+      x: crosswalk.centerX,
+      y: crosswalk.centerY - crosswalk.height / 2 - 15 // 15px away from crosswalk
+    };
+  }
+  
+  // Pedestrian is crossing - move along crosswalk
+  const crosswalk = layout.crosswalks.find(cw => cw.id === crosswalkId);
+  if (!crosswalk) {
+    return { isOnCrosswalk: true, crosswalkId, progress: 0.5, x: layout.centerX, y: layout.centerY };
+  }
+  
+  // Simple crossing animation (could be enhanced with time-based progress)
+  const progress = 0.5; // Mid-crossing for now
+  const crosswalkLength = crosswalk.width;
+  const startX = crosswalk.centerX - crosswalkLength / 2;
+  const endX = crosswalk.centerX + crosswalkLength / 2;
+  
+  return {
+    isOnCrosswalk: true,
+    crosswalkId,
+    progress,
+    x: startX + (endX - startX) * progress,
+    y: crosswalk.centerY
+  };
+}
+
+/**
+ * Determine pedestrian crosswalk from trial data
+ */
+function getPedestrianCrosswalkId(trial: any): string {
+  // Check if trial has pedestrian direction info
+  if (trial.pedestrian_direction) {
+    return trial.pedestrian_direction.toLowerCase();
+  }
+  
+  // Default to north crosswalk (most common scenario)
+  return 'north';
+}
+
+// === LAYER-BASED DRAWING FUNCTIONS ===
+
+/**
+ * Draw background layer (grass areas)
+ */
+function drawLayer_Background(ctx: CanvasRenderingContext2D, layout: IntersectionLayout, colors: any) {
+  // Fill entire canvas with grass background first
+  ctx.fillStyle = '#1a4d1a'; // Dark green for grass
+  ctx.fillRect(0, 0, layout.bounds.w, layout.bounds.h);
+  
+  // Then draw specific grass areas in corners (this will overlay on the full background)
+  layout.grassBounds.forEach(grass => {
+    ctx.fillRect(grass.x, grass.y, grass.width, grass.height);
+  });
+}
+
+/**
+ * Draw road layer (asphalt)
+ */
+function drawLayer_Road(ctx: CanvasRenderingContext2D, layout: IntersectionLayout, colors: any) {
+  const { centerX, centerY, roadWidth } = layout;
+  const halfRoad = roadWidth / 2;
+  
+  // Asphalt color
+  ctx.fillStyle = colors?.road || '#2a2a2a';
+  
+  // Fill the central intersection so it connects visually with all roads
+  ctx.fillRect(centerX - halfRoad, centerY - halfRoad, roadWidth, roadWidth);
+  
+  // Left horizontal road segment
+  ctx.fillRect(
+    layout.bounds.x,
+    centerY - halfRoad,
+    centerX - halfRoad - layout.bounds.x,
+    roadWidth
+  );
+  
+  // Right horizontal road segment
+  ctx.fillRect(
+    centerX + halfRoad,
+    centerY - halfRoad,
+    layout.bounds.x + layout.bounds.w - (centerX + halfRoad),
+    roadWidth
+  );
+  
+  // Top vertical road segment
+  ctx.fillRect(
+    centerX - halfRoad,
+    layout.bounds.y,
+    roadWidth,
+    centerY - halfRoad - layout.bounds.y
+  );
+  
+  // Bottom vertical road segment
+  ctx.fillRect(
+    centerX - halfRoad,
+    centerY + halfRoad,
+    roadWidth,
+    layout.bounds.y + layout.bounds.h - (centerY + halfRoad)
+  );
+  
+  // Road borders (yellow lines) - only around the road edges, not center
+  ctx.strokeStyle = '#fbbf24';
+  ctx.lineWidth = 3;
+  
+  // Horizontal road borders
+  ctx.beginPath();
+  ctx.moveTo(layout.bounds.x, centerY - halfRoad);
+  ctx.lineTo(centerX - halfRoad, centerY - halfRoad);
+  ctx.moveTo(centerX + halfRoad, centerY - halfRoad);
+  ctx.lineTo(layout.bounds.x + layout.bounds.w, centerY - halfRoad);
+  
+  ctx.moveTo(layout.bounds.x, centerY + halfRoad);
+  ctx.lineTo(centerX - halfRoad, centerY + halfRoad);
+  ctx.moveTo(centerX + halfRoad, centerY + halfRoad);
+  ctx.lineTo(layout.bounds.x + layout.bounds.w, centerY + halfRoad);
+  ctx.stroke();
+  
+  // Vertical road borders
+  ctx.beginPath();
+  ctx.moveTo(centerX - halfRoad, layout.bounds.y);
+  ctx.lineTo(centerX - halfRoad, centerY - halfRoad);
+  ctx.moveTo(centerX - halfRoad, centerY + halfRoad);
+  ctx.lineTo(centerX - halfRoad, layout.bounds.y + layout.bounds.h);
+  
+  ctx.moveTo(centerX + halfRoad, layout.bounds.y);
+  ctx.lineTo(centerX + halfRoad, centerY - halfRoad);
+  ctx.moveTo(centerX + halfRoad, centerY + halfRoad);
+  ctx.lineTo(centerX + halfRoad, layout.bounds.y + layout.bounds.h);
+  ctx.stroke();
+}
+
+/**
+ * Draw lane markings
+ */
+function drawLayer_Lanes(ctx: CanvasRenderingContext2D, layout: IntersectionLayout, colors: any) {
+  const { centerX, centerY, roadWidth, laneWidth } = layout;
+  const halfRoad = roadWidth / 2;
+  const halfLane = laneWidth / 2;
+  
+  // Lane centerlines (white dashed) - only on road segments, not in intersection
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([8, 8]);
+  
+  // Horizontal lane markings (left and right segments only)
+  ctx.beginPath();
+  ctx.moveTo(layout.bounds.x, centerY);
+  ctx.lineTo(centerX - halfRoad, centerY);
+  ctx.moveTo(centerX + halfRoad, centerY);
+  ctx.lineTo(layout.bounds.x + layout.bounds.w, centerY);
+  ctx.stroke();
+  
+  // Vertical lane markings (top and bottom segments only)
+  ctx.beginPath();
+  ctx.moveTo(centerX, layout.bounds.y);
+  ctx.lineTo(centerX, centerY - halfRoad);
+  ctx.moveTo(centerX, centerY + halfRoad);
+  ctx.lineTo(centerX, layout.bounds.y + layout.bounds.h);
+  ctx.stroke();
+  
+  ctx.setLineDash([]);
+}
+
+/**
+ * Draw crosswalks
+ */
+function drawLayer_Crosswalks(ctx: CanvasRenderingContext2D, layout: IntersectionLayout, colors: any) {
+  const crosswalkColor = colors?.crosswalk || '#ffffff';
+  
+  // Only show north and south crosswalks (not east/west)
+  const visibleCrosswalkIds = ['north', 'south'];
+  
+  layout.crosswalks
+    .filter(crosswalk => visibleCrosswalkIds.includes(crosswalk.id))
+    .forEach(crosswalk => {
+      ctx.fillStyle = crosswalkColor;
+      
+      // Draw zebra stripes
+      const stripeWidth = 6;
+      const gapWidth = 6;
+      const numStripes = Math.floor(crosswalk.width / (stripeWidth + gapWidth));
+      
+      for (let i = 0; i < numStripes; i++) {
+        const x = crosswalk.bounds.x + i * (stripeWidth + gapWidth);
+        ctx.fillRect(x, crosswalk.bounds.y, stripeWidth, crosswalk.bounds.height);
+      }
+    });
+}
+
+/**
+ * Draw traffic light
+ */
+function drawLayer_SignalLight(ctx: CanvasRenderingContext2D, layout: IntersectionLayout, signal: string, colors: any) {
+  const { centerX, centerY, roadWidth } = layout;
+  const halfRoad = roadWidth / 2;
+  
+  // Position traffic light at corner (top-left from ego perspective) - dynamic based on layout
+  const signalX = centerX - halfRoad - 30; // Reduced from -40
+  const signalY = centerY - halfRoad - 30; // Reduced from -40
+  const radius = 30; // 60px diameter
+  
+  // Traffic light pole
+  ctx.strokeStyle = colors?.signalBody || '#0f172a';
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(signalX, signalY + 60);
+  ctx.lineTo(signalX, signalY - 20);
+  ctx.stroke();
+  
+  // Traffic light housing
+  ctx.fillStyle = colors?.signalBody || '#0f172a';
+  ctx.shadowColor = 'rgba(0,0,0,0.6)';
+  ctx.shadowBlur = 6;
+  ctx.fillRect(signalX - 35, signalY - 35, 70, 140);
+  ctx.shadowBlur = 0;
+  
+  // Light circles
+  const lights = [
+    { color: '#ff0000', y: signalY - 15 }, // Red
+    { color: '#ffff00', y: signalY + 5 },  // Yellow
+    { color: '#00ff00', y: signalY + 25 }  // Green
+  ];
+  
+  lights.forEach((light, index) => {
+    let isActive = false;
+    if (signal === 'RED' && index === 0) isActive = true;
+    if ((signal === 'YELLOW' || signal === 'YELLOW_FLASH') && index === 1) isActive = true; // steady yellow added
+    if ((signal === 'GREEN_ARROW' || signal === 'GREEN') && index === 2) isActive = true;
+    if (signal === 'NO_LEFT_TURN' && index === 0) isActive = true;
+    
+    ctx.beginPath();
+    ctx.arc(signalX, light.y, radius, 0, 2 * Math.PI);
+    
+    if (isActive) {
+      const themeColor = index === 0 ? colors?.signalRed : 
+                        index === 1 ? colors?.signalYellow : 
+                        colors?.signalGreen;
+      
+      ctx.shadowColor = themeColor || light.color;
+      ctx.shadowBlur = 24;
+      ctx.fillStyle = themeColor || light.color;
+      ctx.fill();
+      
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = themeColor || light.color;
+      ctx.fill();
+      
+      ctx.strokeStyle = '#1a1a1a';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  });
+  
+  // White arrow for green arrow signal
+  if (signal === 'GREEN_ARROW') {
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 24px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('←', signalX, signalY + 30);
+  }
+}
+
+/**
+ * Draw vehicles
+ */
+function drawLayer_Vehicles(ctx: CanvasRenderingContext2D, layout: IntersectionLayout, vehicles: VehiclePosition[], colors: any, carImage: HTMLImageElement | null) {
+  vehicles.forEach(vehicle => {
+    const { x, y, angle, urgency } = vehicle;
+    
+    // Car color based on urgency
+    const carColor = urgency > 0.5 ? (colors?.carUrgent || '#ef4444') : (colors?.carSafe || '#60a5fa');
+    
+    const W = INTERSECTION_CONFIG.VEHICLE_WIDTH;
+    const H = INTERSECTION_CONFIG.VEHICLE_HEIGHT;
+    
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    
+    // 자동차 이미지가 로드된 경우 이미지로 렌더링 (뒤집기 수정)
+    if (carImage) {
+      // 이미지를 수직으로 뒤집어서 올바른 방향으로 표시
+      ctx.scale(1, -1);
+      ctx.drawImage(carImage, -W/2, -H/2, W, H);
+      ctx.scale(1, -1); // 원래 상태로 복원
+    } else {
+      // 이미지가 로드되지 않은 경우 기본 사각형으로 대체
+      // Car body
+      ctx.fillStyle = carColor;
+      ctx.fillRect(-W/2, -H/2, W, H);
+      
+      // Car windows
+      ctx.fillStyle = 'rgba(135, 206, 235, 0.4)';
+      ctx.fillRect(-W/2 + 3, -H/2 + 3, W - 6, H - 6);
+      
+      // Wheels (four corners) — looks correct under rotation
+      ctx.fillStyle = '#1a1a1a';
+      const r = 4;
+      const offX = W/2 - 6;
+      const offY = H/2 - 6;
+      ctx.beginPath(); ctx.arc(-offX, -offY, r, 0, 2*Math.PI); ctx.fill(); // front-left
+      ctx.beginPath(); ctx.arc( offX, -offY, r, 0, 2*Math.PI); ctx.fill(); // front-right
+      ctx.beginPath(); ctx.arc(-offX,  offY, r, 0, 2*Math.PI); ctx.fill(); // rear-left
+      ctx.beginPath(); ctx.arc( offX,  offY, r, 0, 2*Math.PI); ctx.fill(); // rear-right
+    }
+    
+    ctx.restore();
+    
+    // Motion trail for urgent vehicles
+    if (urgency > 0.3) {
+      ctx.strokeStyle = carColor;
+      ctx.lineWidth = 3;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(x + Math.cos(angle) * INTERSECTION_CONFIG.VEHICLE_WIDTH/2, 
+                 y + Math.sin(angle) * INTERSECTION_CONFIG.VEHICLE_WIDTH/2);
+      ctx.lineTo(x + Math.cos(angle) * (INTERSECTION_CONFIG.VEHICLE_WIDTH/2 + 20), 
+                 y + Math.sin(angle) * (INTERSECTION_CONFIG.VEHICLE_WIDTH/2 + 20));
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  });
+}
+
+/**
+ * Draw pedestrians
+ */
+function drawLayer_Pedestrians(ctx: CanvasRenderingContext2D, layout: IntersectionLayout, pedestrians: PedestrianState[], colors: any) {
+  pedestrians.forEach(pedestrian => {
+    const { x, y, isOnCrosswalk } = pedestrian;
+    
+    ctx.strokeStyle = colors?.text || '#e5e7eb';
+    ctx.lineWidth = 3.5;
+    
+    // Head
+    ctx.beginPath();
+    ctx.arc(x, y - 20, 9, 0, 2 * Math.PI);
+    ctx.stroke();
+    
+    // Body
+    ctx.beginPath();
+    ctx.moveTo(x, y - 11);
+    ctx.lineTo(x, y + 12);
+    ctx.stroke();
+    
+    // Arms
+    ctx.beginPath();
+    ctx.moveTo(x, y - 4);
+    ctx.lineTo(x - 9, y + 3);
+    ctx.moveTo(x, y - 4);
+    ctx.lineTo(x + 9, y + 3);
+    ctx.stroke();
+    
+    // Legs
+    ctx.beginPath();
+    ctx.moveTo(x, y + 12);
+    ctx.lineTo(x - 7, y + 23);
+    ctx.moveTo(x, y + 12);
+    ctx.lineTo(x + 7, y + 23);
+    ctx.stroke();
+    
+    // Crossing indicator
+    if (isOnCrosswalk) {
+      const warningColor = colors?.carUrgent || '#ef4444';
+      ctx.fillStyle = warningColor;
+      ctx.font = 'bold 12px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('CROSSING', x, y + 38);
+    }
+  });
+}
+
+/**
+ * Draw attention vignette
+ */
+function drawLayer_Vignette(ctx: CanvasRenderingContext2D, layout: IntersectionLayout, colors: any) {
+  const { centerX, centerY } = layout;
+  const radius = Math.min(layout.bounds.w, layout.bounds.h) * 0.4;
+  
+  const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+  gradient.addColorStop(0, 'rgba(255,255,255,0.02)');
+  gradient.addColorStop(0.7, 'rgba(0,0,0,0.05)');
+  gradient.addColorStop(1, 'rgba(0,0,0,0.15)');
+  
+  ctx.fillStyle = gradient;
+  ctx.fillRect(layout.bounds.x, layout.bounds.y, layout.bounds.w, layout.bounds.h);
 }
 
 // ADD-ONLY HELPERS (Canvas UX improvements)
@@ -184,7 +908,7 @@ function LeftTurnAffordance({ showPath = true, canvasHeight = 450 }: { showPath?
           transform: 'translate(-50%, -50%)',
           width: 16 * scale, // 22.4px
           height: 20 * scale, // 28px
-          background: '#10b981',
+          background: '#6b7280',
           borderRadius: 3
         }} />
       </div>
@@ -239,31 +963,79 @@ export default function CanvasRenderer({
   const wrapperRef = useRef<HTMLDivElement>(null)
   const normalizedSignal = normalizeSignal(trial.signal)
   
+  // === 동적 캔버스 크기 및 자동차 이미지 상태 관리 ===
+  const [canvasSize, setCanvasSize] = useState({ width, height })
+  const [carImage, setCarImage] = useState<HTMLImageElement | null>(null)
+  const [imageLoading, setImageLoading] = useState(true)
+  const [imageError, setImageError] = useState(false)
+  
   // Apply dark theme
   useDarkCanvasTheme(wrapperRef)
+
+  // === 자동차 이미지 로딩 ===
+  useEffect(() => {
+    const image = new Image()
+    image.crossOrigin = 'anonymous' // CORS 설정
+    
+    image.onload = () => {
+      setCarImage(image)
+      setImageLoading(false)
+      setImageError(false)
+    }
+    
+    image.onerror = () => {
+      setImageError(true)
+      setImageLoading(false)
+      console.warn('자동차 이미지 로딩 실패, 기본 사각형으로 대체됩니다.')
+    }
+    
+    image.src = 'https://png.pngtree.com/png-vector/20230107/ourmid/pngtree-new-original-transparent-car-png-image_6554552.png'
+  }, [])
+
+  // === 동적 캔버스 크기 조정 ===
+  useEffect(() => {
+    const updateCanvasSize = () => {
+      const container = wrapperRef.current
+      if (container) {
+        const newWidth = container.clientWidth
+        const newHeight = container.clientHeight
+        
+        if (newWidth !== canvasSize.width || newHeight !== canvasSize.height) {
+          setCanvasSize({ width: newWidth, height: newHeight })
+        }
+      }
+    }
+
+    // 초기 크기 설정
+    updateCanvasSize()
+
+    // ResizeObserver로 크기 변경 감지
+    const resizeObserver = new ResizeObserver(updateCanvasSize)
+    if (wrapperRef.current) {
+      resizeObserver.observe(wrapperRef.current)
+    }
+
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [canvasSize.width, canvasSize.height])
 
   // Derive safe bounds (fallback to full area if not provided)
   const container = wrapperRef.current;
   const fullBounds: Bounds = container
-    ? { x: 0, y: 0, w: container.clientWidth || width, h: container.clientHeight || height }
-    : { x: 0, y: 0, w: width, h: height };
+    ? { x: 0, y: 0, w: container.clientWidth || canvasSize.width, h: container.clientHeight || canvasSize.height }
+    : { x: 0, y: 0, w: canvasSize.width, h: canvasSize.height };
   const B: Bounds = safeBounds && safeBounds.w > 0 ? safeBounds : fullBounds;
 
-  // Calculate oncoming car position for overlays (within safe bounds)
-  const maxDistance = B.w * 0.4
-  const minDistance = B.w * 0.1
-  const urgency = Math.max(0, Math.min(1, (CONFIG.TTC_THRESHOLD_SEC - trial.oncoming_car_ttc) / CONFIG.TTC_THRESHOLD_SEC))
-  const distance = maxDistance - (urgency * (maxDistance - minDistance))
+  // Calculate vehicle positions for overlays using new system
+  const layout = initializeIntersectionLayout(canvasSize.width, canvasSize.height, B)
+  const oncomingCarPos = calculateOncomingCarPosition(layout, trial.oncoming_car_ttc)
+  const egoCarPos = calculateEgoCarPosition(layout)
   
-  // Base car position (centered in safe bounds)
-  const carBaseX = B.x + B.w * 0.5 + distance
-  const carBaseY = B.y + B.h * 0.5
-  
-  // Clamp car to safe bounds (car dimensions include halo)
-  const CAR_W = 44, CAR_H = 22;
-  const carClamped = clampRectToBounds(carBaseX - CAR_W/2, carBaseY - CAR_H/2, CAR_W, CAR_H, B);
-  const carX = carClamped.x + CAR_W/2; // Center point
-  const carY = carClamped.y + CAR_H/2;
+  // Use new positioning for overlays
+  const carX = oncomingCarPos.x
+  const carY = oncomingCarPos.y
+  const urgency = oncomingCarPos.urgency
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -275,369 +1047,50 @@ export default function CanvasRenderer({
     // Get dark theme colors
     const colors = getThemeColors(wrapperRef.current)
 
-    // Clear canvas with dark background
-    ctx.fillStyle = colors?.bg || '#0b0f14'
-    ctx.fillRect(0, 0, width, height)
+    // Clear canvas with grass background (no more black edges)
+    ctx.fillStyle = '#1a4d1a' // Dark green grass background
+    ctx.fillRect(0, 0, canvasSize.width, canvasSize.height)
 
-    // Set up drawing parameters
-    ctx.lineWidth = 2.5 // Slightly thicker for dark theme
-    ctx.font = '16px Arial'
+    // Initialize intersection layout with dynamic size
+    const layout = initializeIntersectionLayout(canvasSize.width, canvasSize.height, B)
 
-    // Draw road intersection (with faint grid) - respects safe bounds
-    drawIntersection(ctx, width, height, colors, B)
+    // === NEW LAYER-BASED RENDERING PIPELINE ===
     
-    // Draw traffic light (improved placement + glowing) - clamped
-    drawTrafficLight(ctx, normalizedSignal, width, height, colors, B)
+    // 1. Background layer (grass areas)
+    drawLayer_Background(ctx, layout, colors)
     
-    // Draw oncoming car (with urgency indicator + glow) - clamped
-    drawOncomingCar(ctx, trial.oncoming_car_ttc, width, height, colors, B)
+    // 2. Road layer (asphalt + borders)
+    drawLayer_Road(ctx, layout, colors)
     
-    // Draw pedestrian if present - clamped
+    // 3. Lane markings
+    drawLayer_Lanes(ctx, layout, colors)
+    
+    // 4. Crosswalks
+    drawLayer_Crosswalks(ctx, layout, colors)
+    
+    // 5. Calculate vehicle positions
+    const oncomingCarPos = calculateOncomingCarPosition(layout, trial.oncoming_car_ttc)
+    const egoCarPos = calculateEgoCarPosition(layout)
+    
+    // 6. Traffic light
+    drawLayer_SignalLight(ctx, layout, normalizedSignal, colors)
+    
+    // 7. Vehicles (only oncoming car, ego car is handled by overlay) - 이미지 전달
+    drawLayer_Vehicles(ctx, layout, [oncomingCarPos], colors, carImage)
+    
+    // 8. Pedestrians
     if (trial.pedestrian === 'CROSSING') {
-      drawPedestrian(ctx, width, height, colors, B)
+      const crosswalkId = getPedestrianCrosswalkId(trial)
+      const pedestrianState = calculatePedestrianPosition(layout, true, crosswalkId)
+      drawLayer_Pedestrians(ctx, layout, [pedestrianState], colors)
     }
-
-    // Draw crosswalk (bright but not glaring) - respects safe bounds
-    drawCrosswalk(ctx, width, height, colors, B)
-
-    // Add subtle vignette/spotlight to guide attention (nice-to-have)
-    drawAttentionVignette(ctx, width, height, colors, B, normalizedSignal)
-
-  }, [trial, width, height, normalizedSignal, B.x, B.y, B.w, B.h])
-
-  const drawIntersection = (ctx: CanvasRenderingContext2D, w: number, h: number, colors: any, bounds: Bounds) => {
-    // Center within safe bounds
-    const cx = bounds.x + bounds.w / 2;
-    const cy = bounds.y + bounds.h / 2;
     
-    // Main road (horizontal) - dark slate, respects bounds
-    ctx.strokeStyle = colors?.road || '#1c2532'
-    ctx.lineWidth = 10
-    ctx.beginPath()
-    ctx.moveTo(bounds.x, cy)
-    ctx.lineTo(bounds.x + bounds.w, cy)
-    ctx.stroke()
+    // 9. Attention vignette
+    drawLayer_Vignette(ctx, layout, colors)
 
-    // Cross road (vertical), respects bounds
-    ctx.beginPath()
-    ctx.moveTo(cx, bounds.y)
-    ctx.lineTo(cx, bounds.y + bounds.h)
-    ctx.stroke()
+  }, [trial, canvasSize.width, canvasSize.height, normalizedSignal, B.x, B.y, B.w, B.h, carImage])
 
-    // Lane markings (very faint - barely visible)
-    ctx.strokeStyle = colors?.lane || '#3a4352'
-    ctx.globalAlpha = 0.04 // Extremely faint
-    ctx.lineWidth = 1
-    ctx.setLineDash([10, 10])
-    
-    // Horizontal lane markings
-    ctx.beginPath()
-    ctx.moveTo(0, h * 0.4)
-    ctx.lineTo(w, h * 0.4)
-    ctx.stroke()
-    
-    ctx.beginPath()
-    ctx.moveTo(0, h * 0.6)
-    ctx.lineTo(w, h * 0.6)
-    ctx.stroke()
-
-    // Vertical lane markings
-    ctx.beginPath()
-    ctx.moveTo(w * 0.4, 0)
-    ctx.lineTo(w * 0.4, h)
-    ctx.stroke()
-    
-    ctx.beginPath()
-    ctx.moveTo(w * 0.6, 0)
-    ctx.lineTo(w * 0.6, h)
-    ctx.stroke()
-
-    ctx.setLineDash([])
-    ctx.globalAlpha = 1.0 // Reset opacity
-  }
-
-  const drawTrafficLight = (ctx: CanvasRenderingContext2D, signal: string, w: number, h: number, colors: any, bounds: Bounds) => {
-    // Position on ego approach side (top-left from ego POV), within safe bounds
-    const SIG_W = 28, SIG_H = 95; // Signal dimensions including pole + label
-    const desiredX = bounds.x + bounds.w * 0.35
-    const desiredY = bounds.y + bounds.h * 0.15
-    
-    // Clamp signal to safe bounds
-    const sigClamped = clampRectToBounds(desiredX - SIG_W/2, desiredY, SIG_W, SIG_H, bounds);
-    const x = sigClamped.x + SIG_W/2; // Center X
-    const y = sigClamped.y + 20; // Y for signal top
-    
-    const radius = 30 // Increased to 60px diameter (30px radius)
-
-    // Traffic light pole (dark slate)
-    ctx.strokeStyle = colors?.signalBody || '#0f172a'
-    ctx.lineWidth = 5
-    ctx.beginPath()
-    ctx.moveTo(x, y + 60)
-    ctx.lineTo(x, y - 20)
-    ctx.stroke()
-
-    // Traffic light box (very dark housing) - enlarged for 60px lens
-    ctx.fillStyle = colors?.signalBody || '#0f172a'
-    ctx.shadowColor = 'rgba(0,0,0,0.6)'
-    ctx.shadowBlur = 6
-    ctx.shadowOffsetY = 2
-    ctx.fillRect(x - 35, y - 35, 70, 140) // Enlarged housing for 60px lens
-    ctx.shadowBlur = 0
-    ctx.shadowOffsetY = 0
-
-    // Light circles - repositioned for larger lens
-    const lights = [
-      { color: '#ff0000', y: y - 15 }, // Red
-      { color: '#ffff00', y: y + 5 }, // Yellow
-      { color: '#00ff00', y: y + 25 }  // Green
-    ]
-
-    lights.forEach((light, index) => {
-      // Determine which light is active based on signal
-      let isActive = false
-      if (signal === 'RED' && index === 0) isActive = true
-      if (signal === 'YELLOW_FLASH' && index === 1) isActive = true
-      if ((signal === 'GREEN_ARROW' || signal === 'GREEN') && index === 2) isActive = true
-      if (signal === 'NO_LEFT_TURN' && index === 0) isActive = true
-
-      ctx.beginPath()
-      ctx.arc(x, light.y, radius, 0, 2 * Math.PI)
-
-      if (isActive) {
-        // Active lens - bright with enhanced glow and dark stroke
-        const themeColor = index === 0 ? colors?.signalRed : 
-                          index === 1 ? colors?.signalYellow : 
-                          colors?.signalGreen;
-        
-        // Outer soft glow/halo
-        ctx.shadowColor = themeColor || light.color
-        ctx.shadowBlur = 24 // Increased glow for better visibility
-        ctx.fillStyle = themeColor || light.color
-        ctx.fill()
-        
-        // Inner bright fill
-        ctx.shadowBlur = 0
-        ctx.fillStyle = themeColor || light.color
-        ctx.fill()
-        
-        // 2px dark stroke for contrast
-        ctx.strokeStyle = '#1a1a1a'
-        ctx.lineWidth = 2
-        ctx.stroke()
-      } else {
-        // Inactive lens - dark
-        ctx.fillStyle = '#1a1a1a'
-        ctx.fill()
-        ctx.strokeStyle = 'rgba(255,255,255,0.05)'
-        ctx.lineWidth = 1
-        ctx.stroke()
-      }
-    })
-
-    // Draw white arrow glyph inside green arrow signal
-    if (signal === 'GREEN_ARROW') {
-      // White arrow glyph inside the green lens
-      ctx.fillStyle = '#ffffff'
-      ctx.shadowColor = 'rgba(0,0,0,0.3)'
-      ctx.shadowBlur = 2
-      ctx.font = 'bold 24px Arial'
-      ctx.textAlign = 'center'
-      ctx.fillText('←', x, y + 30) // Positioned in center of green lens
-      ctx.shadowBlur = 0
-      
-      // Arrow label - keep at 12px as requested
-      ctx.font = '12px Arial'
-      ctx.fillStyle = colors?.text || '#e5e7eb'
-      ctx.fillText('ARROW', x, y + 50) // Positioned under the lens
-    }
-
-    // Draw "No Left Turn" sign (red ring + prohibition symbol) - updated for larger lens
-    if (signal === 'NO_LEFT_TURN') {
-      const redColor = colors?.signalRed || '#f87171'
-      ctx.strokeStyle = redColor
-      ctx.shadowColor = redColor
-      ctx.shadowBlur = 12
-      ctx.lineWidth = 3.5
-      ctx.beginPath()
-      ctx.arc(x, y + 30, 25, 0, 2 * Math.PI) // Larger ring for 60px lens
-      ctx.stroke()
-      
-      // Diagonal slash
-      ctx.beginPath()
-      ctx.moveTo(x - 18, y + 15)
-      ctx.lineTo(x + 18, y + 45)
-      ctx.stroke()
-      ctx.shadowBlur = 0
-      
-      // Label text
-      ctx.fillStyle = redColor
-      ctx.font = 'bold 9px Arial'
-      ctx.textAlign = 'center'
-      ctx.fillText('NO LEFT', x, y + 60)
-    }
-  }
-
-  const drawOncomingCar = (ctx: CanvasRenderingContext2D, ttc: number, w: number, h: number, colors: any, bounds: Bounds) => {
-    // Car position based on TTC (closer = more urgent), within safe bounds
-    const maxDistance = bounds.w * 0.4
-    const minDistance = bounds.w * 0.1
-    const urgency = Math.max(0, Math.min(1, (CONFIG.TTC_THRESHOLD_SEC - ttc) / CONFIG.TTC_THRESHOLD_SEC))
-    const distance = maxDistance - (urgency * (maxDistance - minDistance))
-    
-    const cx = bounds.x + bounds.w * 0.5;
-    const cy = bounds.y + bounds.h * 0.5;
-    
-    // Desired position
-    const desiredX = cx + distance
-    const desiredY = cy
-    
-    // Clamp to bounds
-    const carW = 44, carH = 22;
-    const carClamped = clampRectToBounds(desiredX - carW/2, desiredY - carH/2, carW, carH, bounds);
-    const x = carClamped.x + carW/2;
-    const y = carClamped.y + carH/2;
-
-    // Car color based on urgency (with theme colors)
-    const carColor = urgency > 0.5 ? (colors?.carUrgent || '#ef4444') : (colors?.carSafe || '#60a5fa')
-    
-    // Subtle focus glow around car
-    ctx.shadowColor = 'rgba(255,255,255,0.25)'
-    ctx.shadowBlur = 10
-
-    // Car body (slightly larger)
-    ctx.fillStyle = carColor
-    ctx.fillRect(x - 18, y - 10, 36, 20)
-
-    // Car windows
-    ctx.fillStyle = 'rgba(135, 206, 235, 0.4)'
-    ctx.fillRect(x - 15, y - 8, 30, 16)
-    
-    ctx.shadowBlur = 0
-
-    // Wheels
-    ctx.fillStyle = '#1a1a1a'
-    ctx.beginPath()
-    ctx.arc(x - 12, y + 10, 4, 0, 2 * Math.PI)
-    ctx.fill()
-    ctx.beginPath()
-    ctx.arc(x + 12, y + 10, 4, 0, 2 * Math.PI)
-    ctx.fill()
-
-    // Motion trail if urgent
-    if (urgency > 0.3) {
-      ctx.strokeStyle = carColor
-      ctx.lineWidth = 3
-      ctx.setLineDash([5, 5])
-      ctx.beginPath()
-      ctx.moveTo(x + 18, y)
-      ctx.lineTo(x + 35, y)
-      ctx.stroke()
-      ctx.setLineDash([])
-    }
-
-    // TTC indicator removed from canvas (will be overlay badge)
-  }
-
-  const drawPedestrian = (ctx: CanvasRenderingContext2D, w: number, h: number, colors: any, bounds: Bounds) => {
-    // Position within safe bounds
-    const PED_W = 18, PED_H = 50; // Include CROSSING label
-    const desiredX = bounds.x + bounds.w * 0.3
-    const desiredY = bounds.y + bounds.h * 0.5
-    
-    // Clamp to bounds
-    const pedClamped = clampRectToBounds(desiredX - PED_W/2, desiredY - PED_H/2, PED_W, PED_H, bounds);
-    const x = pedClamped.x + PED_W/2;
-    const y = pedClamped.y + PED_H/2;
-
-    // Pedestrian stick figure (light color for dark background)
-    ctx.strokeStyle = colors?.text || '#e5e7eb'
-    ctx.lineWidth = 3.5
-
-    // Head
-    ctx.beginPath()
-    ctx.arc(x, y - 20, 9, 0, 2 * Math.PI)
-    ctx.stroke()
-
-    // Body
-    ctx.beginPath()
-    ctx.moveTo(x, y - 11)
-    ctx.lineTo(x, y + 12)
-    ctx.stroke()
-
-    // Arms
-    ctx.beginPath()
-    ctx.moveTo(x, y - 4)
-    ctx.lineTo(x - 9, y + 3)
-    ctx.moveTo(x, y - 4)
-    ctx.lineTo(x + 9, y + 3)
-    ctx.stroke()
-
-    // Legs
-    ctx.beginPath()
-    ctx.moveTo(x, y + 12)
-    ctx.lineTo(x - 7, y + 23)
-    ctx.moveTo(x, y + 12)
-    ctx.lineTo(x + 7, y + 23)
-    ctx.stroke()
-
-    // Walking indicator (bright but not glaring)
-    const warningColor = colors?.carUrgent || '#ef4444'
-    ctx.fillStyle = warningColor
-    ctx.font = 'bold 12px Arial'
-    ctx.textAlign = 'center'
-    ctx.shadowColor = warningColor
-    ctx.shadowBlur = 8
-    ctx.fillText('CROSSING', x, y + 38)
-    ctx.shadowBlur = 0
-  }
-
-  const drawCrosswalk = (ctx: CanvasRenderingContext2D, w: number, h: number, colors: any, bounds: Bounds) => {
-    // Clean zebra crosswalk: perpendicular stripes (not L-shape stack), within safe bounds
-    const crosswalkColor = colors?.crosswalk || '#cbd5e1';
-    
-    // Horizontal zebra crossing (pedestrian crosses vertically)
-    drawZebraStripesCanvas(ctx, {
-      x: bounds.x + bounds.w * 0.35,
-      y: bounds.y + bounds.h * 0.42,
-      length: bounds.w * 0.30,
-      depth: bounds.h * 0.16,
-      orientation: 'horizontal',
-      stripes: 7,
-      stripe: 5,
-      gap: 9,
-      color: crosswalkColor
-    });
-    
-    // Vertical zebra crossing (pedestrian crosses horizontally)
-    drawZebraStripesCanvas(ctx, {
-      x: bounds.x + bounds.w * 0.42,
-      y: bounds.y + bounds.h * 0.35,
-      length: bounds.h * 0.30,
-      depth: bounds.w * 0.16,
-      orientation: 'vertical',
-      stripes: 7,
-      stripe: 5,
-      gap: 9,
-      color: crosswalkColor
-    });
-  }
-
-  const drawAttentionVignette = (ctx: CanvasRenderingContext2D, w: number, h: number, colors: any, bounds: Bounds, signal: string) => {
-    // Subtle radial gradient to guide attention to active signal and conflict area
-    const centerX = bounds.x + bounds.w * 0.35; // Traffic light area
-    const centerY = bounds.y + bounds.h * 0.3;
-    const radius = Math.min(bounds.w, bounds.h) * 0.4;
-    
-    // Create radial gradient
-    const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
-    gradient.addColorStop(0, 'rgba(255,255,255,0.02)'); // Very subtle center highlight
-    gradient.addColorStop(0.7, 'rgba(0,0,0,0.05)'); // Slight darkening
-    gradient.addColorStop(1, 'rgba(0,0,0,0.15)'); // More pronounced edge darkening
-    
-    ctx.fillStyle = gradient;
-    ctx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
-  }
+  // Old drawing functions removed - now using layer-based system above
 
   return (
     <div 
@@ -651,19 +1104,20 @@ export default function CanvasRenderer({
     >
       <canvas
         ref={canvasRef}
-        width={width}
-        height={height}
+        width={canvasSize.width}
+        height={canvasSize.height}
         style={{ 
           border: '2px solid #1f2937',
           borderRadius: '12px',
-          background: '#0b0f14',
-          display: 'block'
+          background: '#1a4d1a', // Grass background to match canvas content
+          display: 'block',
+          width: '100%',
+          height: '100%'
         }}
         aria-label={`Traffic scene: ${normalizedSignal} signal, ${trial.oncoming_car_ttc.toFixed(1)}s TTC, ${trial.pedestrian === 'CROSSING' ? 'pedestrian crossing' : 'no pedestrian'}`}
       />
       
-      {/* Ego vehicle + left-turn path overlay */}
-      <LeftTurnAffordance showPath canvasHeight={height} />
+      {/* Ego vehicle + left-turn path overlay - removed */}
       
       {/* Motion chevrons (show if car is approaching quickly) */}
       <MotionChevrons x={carX} y={carY} visible={urgency > 0.2} />
@@ -680,6 +1134,7 @@ export default function CanvasRenderer({
       }}>
         {formatTTCBadge(trial.oncoming_car_ttc)}
       </div>
+      
     </div>
   )
 }
