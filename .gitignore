@@ -116,3 +116,7 @@ Thumbs.db
 .vercel
 .netlify
 .railway
+
+# --- allow Vite static assets in frontend ---
+!frontend/public/
+!frontend/public/**
