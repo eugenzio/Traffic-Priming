@@ -2,6 +2,47 @@ import React, { useEffect, useRef, useState } from 'react'
 import { CONFIG } from '../config'
 import type { Trial } from '../types'
 
+// --- Car sprite (primary URL + fallback) ---
+const CAR_SPRITE_URL = '/assets/ego-car.png'; // local asset to avoid CORS
+
+// Take the long base64 string you currently set in image.src and place it here:
+const FALLBACK_CAR_BASE64 =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGcSURBVGhD7dnBSsJAGEDx/6T1EqSP0IMIWvVSiCIILPaiizZ6Ed3qYfQiuu3LSAgiKAjio/+wM4uM2U0SY8EZiJ9/uFs2ASkppRQtYApYAn5bB8yBERgEFoFz4AwYBbbAhbAGXAILQBlYAx6BRWAX2AFnwApwCQyC+QJ/BYY9wBgYiVYBuyAXXATugbXgE/AZGAn3gC/gDjgBDgGfQBVYBWbBHfAZ2AUuAd+AY2BVaAGWwClwCRwCb4ElYG/dAmPAXfAVWAUWgYXgEjgEpgFvQLcO2AT2gsvgE7gElgGvwEbwCjgD2gWmgQ3gE/AamAXuAnuBRWAWeAV+A1eBfWAeWAWuAYPABLAF/ApqgTdgFrgC/ApogVfgBbgF/ApogVbgF/ApqAWPwC/wW6AFjsAv8FugBRbAL/BbYANmwC/wW2AD9sAv8FtgA3bAL/BbYAP+wC/wW2ADfsAv8FtgA3bAL/BbYAP2wC/wW2AD5sAv8FvQAk/gB3gt0AJH4Ad4LdACi+AHeC3QAj/gh3gt0AJ/4Id4LdACP+AHeC1eAHzf9z0/ABzpA1h0tN0ZKaWU/vIDbbwNMvP8MzoAAAAASUVORK5CYII=';
+
+let CAR_IMG_CACHE: HTMLImageElement | null = null;
+
+async function fetchCarImage(): Promise<HTMLImageElement> {
+  if (CAR_IMG_CACHE) return CAR_IMG_CACHE;
+
+  // Try local asset first (no CORS needed)
+  const img = new Image();
+  // img.crossOrigin = 'anonymous'; // not needed for local public asset
+  const tryLoad = new Promise<HTMLImageElement>((resolve, reject) => {
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+  });
+  img.src = CAR_SPRITE_URL;
+
+  try {
+    const ok = await tryLoad;
+    console.info('[CAR] sprite loaded', ok.width, ok.height);
+    CAR_IMG_CACHE = ok;
+    return ok;
+  } catch {
+    // Fallback to embedded base64 (always works)
+    const fb = new Image();
+    const fbLoad = new Promise<HTMLImageElement>((resolve) => {
+      fb.onload = () => resolve(fb);
+      fb.onerror = () => resolve(fb);
+    });
+    fb.src = FALLBACK_CAR_BASE64;
+    const ok = await fbLoad;
+    console.warn('[CAR] fallback sprite in use');
+    CAR_IMG_CACHE = ok;
+    return ok;
+  }
+}
+
 type Bounds = { x: number; y: number; w: number; h: number };
 
 // === NEW INTERSECTION LAYOUT TYPES ===
@@ -60,12 +101,22 @@ interface CanvasRendererProps {
   safeBounds?: Bounds
 }
 
+// === CAR IMAGE ORIENTATION ===
+// 자동차 원본 이미지가 "오른쪽"을 보고 있다면 0, "왼쪽"이면 Math.PI, "위"면 -Math.PI/2, "아래"면 Math.PI/2
+const CAR_IMAGE_ORIENTATION = -Math.PI / 2; // 원본이 "위"를 보고 있음 (Up)
+
+function normalizeAngle(a: number) {
+  while (a <= -Math.PI) a += Math.PI * 2;
+  while (a >  Math.PI) a -= Math.PI * 2;
+  return a;
+}
+
 // === INTERSECTION CONFIGURATION ===
 const INTERSECTION_CONFIG = {
   ROAD_WIDTH_RATIO: 0.3,      // Road width as % of canvas (reduced for grass areas)
   LANE_COUNT: 2,              // Lanes per direction
-  VEHICLE_WIDTH: 50,          // Increased from 40 to 50
-  VEHICLE_HEIGHT: 30,         // Increased from 24 to 30
+  VEHICLE_LENGTH: 72,         // NEW (length)
+  VEHICLE_WIDTH: 36,          // NEW (width)
   PEDESTRIAN_RADIUS: 8,
   CROSSWALK_WIDTH: 60,        // Reduced crosswalk width
   CROSSWALK_HEIGHT: 12,       // Reduced crosswalk height
@@ -265,8 +316,8 @@ function calculateOncomingCarPosition(layout: IntersectionLayout, ttc: number): 
   const x = eastLane.startPoint.x + (eastLane.endPoint.x - eastLane.startPoint.x) * progress;
   const y = eastLane.startPoint.y + (eastLane.endPoint.y - eastLane.startPoint.y) * progress;
   
-  // Calculate angle based on lane direction
-  const angle = Math.atan2(eastLane.endPoint.y - eastLane.startPoint.y, eastLane.endPoint.x - eastLane.startPoint.x);
+  // Calculate angle based on lane direction - make car point left (west direction)
+  const angle = Math.PI; // 180 degrees = pointing left (west)
   
   return {
     laneId: 'EAST',
@@ -612,59 +663,65 @@ function drawLayer_SignalLight(ctx: CanvasRenderingContext2D, layout: Intersecti
 /**
  * Draw vehicles
  */
-function drawLayer_Vehicles(ctx: CanvasRenderingContext2D, layout: IntersectionLayout, vehicles: VehiclePosition[], colors: any, carImage: HTMLImageElement | null) {
+function drawLayer_Vehicles(
+  ctx: CanvasRenderingContext2D,
+  layout: IntersectionLayout,
+  vehicles: VehiclePosition[],
+  colors: any,
+  carImage: HTMLImageElement | null
+) {
   vehicles.forEach(vehicle => {
     const { x, y, angle, urgency } = vehicle;
-    
-    // Car color based on urgency
     const carColor = urgency > 0.5 ? (colors?.carUrgent || '#ef4444') : (colors?.carSafe || '#60a5fa');
-    
-    const W = INTERSECTION_CONFIG.VEHICLE_WIDTH;
-    const H = INTERSECTION_CONFIG.VEHICLE_HEIGHT;
-    
+    const L = INTERSECTION_CONFIG.VEHICLE_LENGTH; // length (long side)
+    const W = INTERSECTION_CONFIG.VEHICLE_WIDTH;  // width  (short side)
+
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate(angle);
-    
-    // 자동차 이미지가 로드된 경우 이미지로 렌더링 (뒤집기 수정)
+    ctx.rotate(normalizeAngle(angle - CAR_IMAGE_ORIENTATION)); // Use (target angle - source angle)
+
+    // Optional: Preserve sprite aspect ratio but clamp to lane width
+    let drawW: number = W, drawH: number = L;
     if (carImage) {
-      // 이미지를 수직으로 뒤집어서 올바른 방향으로 표시
-      ctx.scale(1, -1);
-      ctx.drawImage(carImage, -W/2, -H/2, W, H);
-      ctx.scale(1, -1); // 원래 상태로 복원
-    } else {
-      // 이미지가 로드되지 않은 경우 기본 사각형으로 대체
-      // Car body
-      ctx.fillStyle = carColor;
-      ctx.fillRect(-W/2, -H/2, W, H);
-      
-      // Car windows
-      ctx.fillStyle = 'rgba(135, 206, 235, 0.4)';
-      ctx.fillRect(-W/2 + 3, -H/2 + 3, W - 6, H - 6);
-      
-      // Wheels (four corners) — looks correct under rotation
-      ctx.fillStyle = '#1a1a1a';
-      const r = 4;
-      const offX = W/2 - 6;
-      const offY = H/2 - 6;
-      ctx.beginPath(); ctx.arc(-offX, -offY, r, 0, 2*Math.PI); ctx.fill(); // front-left
-      ctx.beginPath(); ctx.arc( offX, -offY, r, 0, 2*Math.PI); ctx.fill(); // front-right
-      ctx.beginPath(); ctx.arc(-offX,  offY, r, 0, 2*Math.PI); ctx.fill(); // rear-left
-      ctx.beginPath(); ctx.arc( offX,  offY, r, 0, 2*Math.PI); ctx.fill(); // rear-right
+      const ar = carImage.width / carImage.height; // natural aspect (w/h)
+      drawW = Math.min(W, L * ar, layout.laneWidth * 0.9);
+      drawH = drawW / ar;
     }
-    
+
+    if (carImage) {
+      // 폭=width(W), 높이=length(L)
+      ctx.drawImage(carImage, -drawW / 2, -drawH / 2, drawW, drawH);
+    } else {
+      // fallback 렌더 (앞쪽 표식: 왼쪽이 전방)
+      ctx.fillStyle = carColor;
+      ctx.fillRect(-drawW / 2, -drawH / 2, drawW, drawH);
+      ctx.fillStyle = 'rgba(135,206,235,0.4)';
+      ctx.fillRect(-drawW / 2 + 3, -drawH / 2 + 3, drawW - 6, drawH - 6);
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(-drawW / 2 - 5, -3, 5, 6); // front marker
+      ctx.fillStyle = '#1a1a1a';
+      const r = 4, offX = drawW / 2 - 6, offY = drawH / 2 - 6;
+      ctx.beginPath(); ctx.arc(-offX, -offY, r, 0, 2*Math.PI); ctx.fill();
+      ctx.beginPath(); ctx.arc( offX, -offY, r, 0, 2*Math.PI); ctx.fill();
+      ctx.beginPath(); ctx.arc(-offX,  offY, r, 0, 2*Math.PI); ctx.fill();
+      ctx.beginPath(); ctx.arc( offX,  offY, r, 0, 2*Math.PI); ctx.fill();
+    }
+
     ctx.restore();
-    
-    // Motion trail for urgent vehicles
+
     if (urgency > 0.3) {
       ctx.strokeStyle = carColor;
       ctx.lineWidth = 3;
       ctx.setLineDash([5, 5]);
       ctx.beginPath();
-      ctx.moveTo(x + Math.cos(angle) * INTERSECTION_CONFIG.VEHICLE_WIDTH/2, 
-                 y + Math.sin(angle) * INTERSECTION_CONFIG.VEHICLE_WIDTH/2);
-      ctx.lineTo(x + Math.cos(angle) * (INTERSECTION_CONFIG.VEHICLE_WIDTH/2 + 20), 
-                 y + Math.sin(angle) * (INTERSECTION_CONFIG.VEHICLE_WIDTH/2 + 20));
+      ctx.moveTo(
+        x + Math.cos(angle) * (W / 2),
+        y + Math.sin(angle) * (W / 2)
+      );
+      ctx.lineTo(
+        x + Math.cos(angle) * (W / 2 + 20),
+        y + Math.sin(angle) * (W / 2 + 20)
+      );
       ctx.stroke();
       ctx.setLineDash([]);
     }
@@ -974,22 +1031,21 @@ export default function CanvasRenderer({
 
   // === 자동차 이미지 로딩 ===
   useEffect(() => {
-    const image = new Image()
-    image.crossOrigin = 'anonymous' // CORS 설정
-    
-    image.onload = () => {
-      setCarImage(image)
-      setImageLoading(false)
-      setImageError(false)
-    }
-    
-    image.onerror = () => {
-      setImageError(true)
-      setImageLoading(false)
-      console.warn('자동차 이미지 로딩 실패, 기본 사각형으로 대체됩니다.')
-    }
-    
-    image.src = 'https://png.pngtree.com/png-vector/20230107/ourmid/pngtree-new-original-transparent-car-png-image_6554552.png'
+    let alive = true;
+    setImageLoading(true);
+    fetchCarImage()
+      .then((img) => {
+        if (!alive) return;
+        setCarImage(img);
+        setImageError(false);
+        setImageLoading(false);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setImageError(true);
+        setImageLoading(false);
+      });
+    return () => { alive = false; };
   }, [])
 
   // === 동적 캔버스 크기 조정 ===
@@ -1072,6 +1128,18 @@ export default function CanvasRenderer({
     const oncomingCarPos = calculateOncomingCarPosition(layout, trial.oncoming_car_ttc)
     const egoCarPos = calculateEgoCarPosition(layout)
     
+    // Debug crosshair at car position
+    ctx.save();
+    ctx.strokeStyle = '#ff00ff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(oncomingCarPos.x - 6, oncomingCarPos.y);
+    ctx.lineTo(oncomingCarPos.x + 6, oncomingCarPos.y);
+    ctx.moveTo(oncomingCarPos.x, oncomingCarPos.y - 6);
+    ctx.lineTo(oncomingCarPos.x, oncomingCarPos.y + 6);
+    ctx.stroke();
+    ctx.restore();
+    
     // 6. Traffic light
     drawLayer_SignalLight(ctx, layout, normalizedSignal, colors)
     
@@ -1126,8 +1194,8 @@ export default function CanvasRenderer({
       <div style={{ 
         ...HUD.badge, 
         position:'absolute', 
-        left: Math.max(B.x + 80, Math.min(carX + 22, B.x + B.w - 90)), // Ensure 16-20px gap from ego car (left: 24 + 50.4px + 20px = ~94px)
-        top: Math.max(B.y, Math.min(carY - 30, B.y + B.h - 32)), // Clamp vertically (badge height ~28px)
+        left: Math.max(B.x + 80, Math.min(carX + 40, B.x + B.w - 120)), // Move badge away from car
+        top: Math.max(B.y + 10, Math.min(carY - 50, B.y + B.h - 40)), // Move badge above car
         background: '#111827',
         color: '#e5e7eb',
         border: '1px solid rgba(255,255,255,0.1)'
