@@ -55,7 +55,14 @@ export default function App() {
   const goTrial = () => setPhase('trial')
   const finishExperiment = () => setPhase('done')
 
-  const onPrimeDone = () => { setTi(0); goTrial() }
+  const onPrimeDone = () => { 
+    // After first prime screen, go directly to done phase instead of trial
+    if (bi === 0) {
+      finishExperiment()
+    } else {
+      setTi(0); goTrial() 
+    }
+  }
 
   const onTrialComplete = () => {
     const trialsInBlock = curBlock?.trials?.length ?? 0
