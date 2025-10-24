@@ -105,6 +105,9 @@ interface CanvasRendererProps {
 // 자동차 원본 이미지가 "오른쪽"을 보고 있다면 0, "왼쪽"이면 Math.PI, "위"면 -Math.PI/2, "아래"면 Math.PI/2
 const CAR_IMAGE_ORIENTATION = -Math.PI / 2; // 원본이 "위"를 보고 있음 (Up)
 
+// === EDGE BLEED ===
+const EDGE_BLEED = 2; // px – draw roads past the canvas edge
+
 function normalizeAngle(a: number) {
   while (a <= -Math.PI) a += Math.PI * 2;
   while (a >  Math.PI) a -= Math.PI * 2;
@@ -437,11 +440,11 @@ function getPedestrianCrosswalkId(trial: any): string {
  * Draw background layer (grass areas)
  */
 function drawLayer_Background(ctx: CanvasRenderingContext2D, layout: IntersectionLayout, colors: any) {
-  // Fill entire canvas with grass background first
-  ctx.fillStyle = '#1a4d1a'; // Dark green for grass
-  ctx.fillRect(0, 0, layout.bounds.w, layout.bounds.h);
+  // Fill entire canvas area (not just bounds) – transparent base now
+  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   
-  // Then draw specific grass areas in corners (this will overlay on the full background)
+  // Draw grass only in corner regions (as we do now)
+  ctx.fillStyle = '#1a4d1a';
   layout.grassBounds.forEach(grass => {
     ctx.fillRect(grass.x, grass.y, grass.width, grass.height);
   });
@@ -453,73 +456,51 @@ function drawLayer_Background(ctx: CanvasRenderingContext2D, layout: Intersectio
 function drawLayer_Road(ctx: CanvasRenderingContext2D, layout: IntersectionLayout, colors: any) {
   const { centerX, centerY, roadWidth } = layout;
   const halfRoad = roadWidth / 2;
-  
-  // Asphalt color
-  ctx.fillStyle = colors?.road || '#2a2a2a';
-  
-  // Fill the central intersection so it connects visually with all roads
-  ctx.fillRect(centerX - halfRoad, centerY - halfRoad, roadWidth, roadWidth);
-  
-  // Left horizontal road segment
-  ctx.fillRect(
-    layout.bounds.x,
-    centerY - halfRoad,
-    centerX - halfRoad - layout.bounds.x,
-    roadWidth
-  );
-  
-  // Right horizontal road segment
-  ctx.fillRect(
-    centerX + halfRoad,
-    centerY - halfRoad,
-    layout.bounds.x + layout.bounds.w - (centerX + halfRoad),
-    roadWidth
-  );
-  
-  // Top vertical road segment
-  ctx.fillRect(
-    centerX - halfRoad,
-    layout.bounds.y,
-    roadWidth,
-    centerY - halfRoad - layout.bounds.y
-  );
-  
-  // Bottom vertical road segment
-  ctx.fillRect(
-    centerX - halfRoad,
-    centerY + halfRoad,
-    roadWidth,
-    layout.bounds.y + layout.bounds.h - (centerY + halfRoad)
-  );
-  
-  // Road borders (yellow lines) - only around the road edges, not center
+
+  const leftEdge   = layout.bounds.x - EDGE_BLEED;
+  const rightEdge  = layout.bounds.x + layout.bounds.w + EDGE_BLEED;
+  const topEdge    = layout.bounds.y - EDGE_BLEED;
+  const bottomEdge = layout.bounds.y + layout.bounds.h + EDGE_BLEED;
+
+  ctx.fillStyle = colors?.road || '#1c2532';
+
+  // Center square (slightly oversized so no seam)
+  ctx.fillRect(centerX - halfRoad - EDGE_BLEED, centerY - halfRoad - EDGE_BLEED,
+               roadWidth + EDGE_BLEED * 2, roadWidth + EDGE_BLEED * 2);
+
+  // Horizontal roads to bleed out
+  ctx.fillRect(leftEdge, centerY - halfRoad, (centerX - halfRoad) - leftEdge, roadWidth);
+  ctx.fillRect(centerX + halfRoad, centerY - halfRoad, rightEdge - (centerX + halfRoad), roadWidth);
+
+  // Vertical roads to bleed out
+  ctx.fillRect(centerX - halfRoad, topEdge, roadWidth, (centerY - halfRoad) - topEdge);
+  ctx.fillRect(centerX - halfRoad, centerY + halfRoad, roadWidth, bottomEdge - (centerY + halfRoad));
+
+  // Keep border strokes but snap to pixels (optional)
   ctx.strokeStyle = '#fbbf24';
   ctx.lineWidth = 3;
-  
-  // Horizontal road borders
   ctx.beginPath();
-  ctx.moveTo(layout.bounds.x, centerY - halfRoad);
-  ctx.lineTo(centerX - halfRoad, centerY - halfRoad);
-  ctx.moveTo(centerX + halfRoad, centerY - halfRoad);
-  ctx.lineTo(layout.bounds.x + layout.bounds.w, centerY - halfRoad);
-  
-  ctx.moveTo(layout.bounds.x, centerY + halfRoad);
-  ctx.lineTo(centerX - halfRoad, centerY + halfRoad);
-  ctx.moveTo(centerX + halfRoad, centerY + halfRoad);
-  ctx.lineTo(layout.bounds.x + layout.bounds.w, centerY + halfRoad);
-  ctx.stroke();
-  
-  // Vertical road borders
-  ctx.beginPath();
-  ctx.moveTo(centerX - halfRoad, layout.bounds.y);
-  ctx.lineTo(centerX - halfRoad, centerY - halfRoad);
-  ctx.moveTo(centerX - halfRoad, centerY + halfRoad);
-  ctx.lineTo(centerX - halfRoad, layout.bounds.y + layout.bounds.h);
-  
-  ctx.moveTo(centerX + halfRoad, layout.bounds.y);
-  ctx.lineTo(centerX + halfRoad, centerY - halfRoad);
-  ctx.moveTo(centerX + halfRoad, centerY + halfRoad);
-  ctx.lineTo(centerX + halfRoad, layout.bounds.y + layout.bounds.h);
+  // Horizontal borders
+  ctx.moveTo(leftEdge,  Math.round(centerY - halfRoad) + 0.5);
+  ctx.lineTo(centerX - halfRoad, Math.round(centerY - halfRoad) + 0.5);
+  ctx.moveTo(centerX + halfRoad, Math.round(centerY - halfRoad) + 0.5);
+  ctx.lineTo(rightEdge, Math.round(centerY - halfRoad) + 0.5);
+
+  ctx.moveTo(leftEdge,  Math.round(centerY + halfRoad) + 0.5);
+  ctx.lineTo(centerX - halfRoad, Math.round(centerY + halfRoad) + 0.5);
+  ctx.moveTo(centerX + halfRoad, Math.round(centerY + halfRoad) + 0.5);
+  ctx.lineTo(rightEdge, Math.round(centerY + halfRoad) + 0.5);
+
+  // Vertical borders
+  ctx.moveTo(Math.round(centerX - halfRoad) + 0.5, topEdge);
+  ctx.lineTo(Math.round(centerX - halfRoad) + 0.5, centerY - halfRoad);
+  ctx.moveTo(Math.round(centerX - halfRoad) + 0.5, centerY + halfRoad);
+  ctx.lineTo(Math.round(centerX - halfRoad) + 0.5, bottomEdge);
+
+  ctx.moveTo(Math.round(centerX + halfRoad) + 0.5, topEdge);
+  ctx.lineTo(Math.round(centerX + halfRoad) + 0.5, centerY - halfRoad);
+  ctx.moveTo(Math.round(centerX + halfRoad) + 0.5, centerY + halfRoad);
+  ctx.lineTo(Math.round(centerX + halfRoad) + 0.5, bottomEdge);
   ctx.stroke();
 }
 
@@ -786,7 +767,7 @@ function drawLayer_Vignette(ctx: CanvasRenderingContext2D, layout: IntersectionL
   const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
   gradient.addColorStop(0, 'rgba(255,255,255,0.02)');
   gradient.addColorStop(0.7, 'rgba(0,0,0,0.05)');
-  gradient.addColorStop(1, 'rgba(0,0,0,0.15)');
+  gradient.addColorStop(1, 'rgba(0,0,0,0.06)'); // Reduced from 0.15 to prevent edge halo
   
   ctx.fillStyle = gradient;
   ctx.fillRect(layout.bounds.x, layout.bounds.y, layout.bounds.w, layout.bounds.h);
@@ -1103,9 +1084,8 @@ export default function CanvasRenderer({
     // Get dark theme colors
     const colors = getThemeColors(wrapperRef.current)
 
-    // Clear canvas with grass background (no more black edges)
-    ctx.fillStyle = '#1a4d1a' // Dark green grass background
-    ctx.fillRect(0, 0, canvasSize.width, canvasSize.height)
+    // Clear canvas with transparent background
+    ctx.clearRect(0, 0, canvasSize.width, canvasSize.height)
 
     // Initialize intersection layout with dynamic size
     const layout = initializeIntersectionLayout(canvasSize.width, canvasSize.height, B)
@@ -1166,7 +1146,9 @@ export default function CanvasRenderer({
       data-canvas-theme="dark"
       style={{ 
         position: 'relative', 
-        display: 'inline-block'
+        display: 'inline-block',
+        overflow: 'hidden',
+        background: 'transparent'
         // Removed scale transform - it interferes with viewport math
       }}
     >
@@ -1177,10 +1159,11 @@ export default function CanvasRenderer({
         style={{ 
           border: '2px solid #1f2937',
           borderRadius: '12px',
-          background: '#1a4d1a', // Grass background to match canvas content
+          background: 'transparent', // Transparent background - no green bezel
           display: 'block',
           width: '100%',
-          height: '100%'
+          height: '100%',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)' // Add subtle shadow for depth
         }}
         aria-label={`Traffic scene: ${normalizedSignal} signal, ${trial.oncoming_car_ttc.toFixed(1)}s TTC, ${trial.pedestrian === 'CROSSING' ? 'pedestrian crossing' : 'no pedestrian'}`}
       />
