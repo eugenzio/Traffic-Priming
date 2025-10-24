@@ -120,3 +120,7 @@ Thumbs.db
 # --- allow Vite static assets in frontend ---
 !frontend/public/
 !frontend/public/**
+
+# --- allow frontend public assets ---
+!frontend/public/
+!frontend/public/**
