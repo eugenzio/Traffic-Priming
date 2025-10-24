@@ -17,6 +17,7 @@ async function fetchCarImage(): Promise<HTMLImageElement> {
   // Try local asset first (no CORS needed)
   const img = new Image();
   // img.crossOrigin = 'anonymous'; // not needed for local public asset
+  console.info('[CAR] sprite path:', CAR_SPRITE_URL);
   const tryLoad = new Promise<HTMLImageElement>((resolve, reject) => {
     img.onload = () => resolve(img);
     img.onerror = reject;
@@ -661,27 +662,32 @@ function drawLayer_Vehicles(
     ctx.translate(x, y);
     ctx.rotate(normalizeAngle(angle - CAR_IMAGE_ORIENTATION)); // Use (target angle - source angle)
 
-    // Optional: Preserve sprite aspect ratio but clamp to lane width
-    let drawW: number = W, drawH: number = L;
     if (carImage) {
-      const ar = carImage.width / carImage.height; // natural aspect (w/h)
-      drawW = Math.min(W, L * ar, layout.laneWidth * 0.9);
-      drawH = drawW / ar;
-    }
+      // High-quality scaling
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
 
-    if (carImage) {
-      // 폭=width(W), 높이=length(L)
-      ctx.drawImage(carImage, -drawW / 2, -drawH / 2, drawW, drawH);
+      // keep the car length stable and compute width by natural AR
+      const targetLength = 72; // long side of the car (front↔back)
+      const natW = carImage.naturalWidth || 1;
+      const natH = carImage.naturalHeight || 1;
+      const ar = natW / natH;
+
+      // If the image is "top view, pointing up", height is the long side.
+      const H = targetLength;
+      const W = Math.max(28, Math.round(H * ar)); // keep a minimum to avoid too thin
+
+      ctx.drawImage(carImage, -W / 2, -H / 2, W, H);
     } else {
       // fallback 렌더 (앞쪽 표식: 왼쪽이 전방)
       ctx.fillStyle = carColor;
-      ctx.fillRect(-drawW / 2, -drawH / 2, drawW, drawH);
+      ctx.fillRect(-W / 2, -L / 2, W, L);
       ctx.fillStyle = 'rgba(135,206,235,0.4)';
-      ctx.fillRect(-drawW / 2 + 3, -drawH / 2 + 3, drawW - 6, drawH - 6);
+      ctx.fillRect(-W / 2 + 3, -L / 2 + 3, W - 6, L - 6);
       ctx.fillStyle = '#fff';
-      ctx.fillRect(-drawW / 2 - 5, -3, 5, 6); // front marker
+      ctx.fillRect(-W / 2 - 5, -3, 5, 6); // front marker
       ctx.fillStyle = '#1a1a1a';
-      const r = 4, offX = drawW / 2 - 6, offY = drawH / 2 - 6;
+      const r = 4, offX = W / 2 - 6, offY = L / 2 - 6;
       ctx.beginPath(); ctx.arc(-offX, -offY, r, 0, 2*Math.PI); ctx.fill();
       ctx.beginPath(); ctx.arc( offX, -offY, r, 0, 2*Math.PI); ctx.fill();
       ctx.beginPath(); ctx.arc(-offX,  offY, r, 0, 2*Math.PI); ctx.fill();
