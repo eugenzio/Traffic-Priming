@@ -36,12 +36,18 @@ export interface Trial {
   oncoming_car_ttc: number; // seconds
   pedestrian: Pedestrian;
   /**
-   * NEW: the crosswalk side where the pedestrian appears for this trial.
-   * 'left'  -> west crosswalk (left of ego approach)
-   * 'right' -> east crosswalk (right of ego approach)
-   * If omitted, defaults to 'right' (safe fallback: doesn't block turn).
+   * NEW: restrict where pedestrians can appear.
+   * Only 'north' (top) or 'south' (bottom) are valid.
+   * - 'south' = blocks left turn (pedestrian in turn path)
+   * - 'north' = does NOT block left turn (far side)
+   */
+  pedestrian_crosswalk?: 'north' | 'south';
+  /**
+   * LEGACY (backward compatibility): may still exist in older data.
+   * Will be mapped to north/south in code.
    */
   pedestrian_side?: 'left' | 'right';
+  pedestrian_direction?: 'west' | 'east' | 'north' | 'south';
   correct: Choice; // computed helper, also computed server-side
 }
 

@@ -1,5 +1,5 @@
 /**
- * Decision logic for left-turn maneuvers
+ * Decision logic for left-turn maneuvers with north/south pedestrian crosswalks
  */
 
 import type { Trial } from '../types';
@@ -7,114 +7,94 @@ import { CONFIG } from '../config';
 import { aabbIntersects, type AABB } from './geometry';
 
 /**
- * Define the left-turn corridor (simplified AABB)
- * This represents the path the ego vehicle would sweep through when turning left.
- * Origin: intersection center, approaching from west (left side of screen)
- *
- * Rough geometry:
- * - Starts in west lane (left approach)
- * - Sweeps through intersection center
- * - Ends in north lane (upward exit)
+ * Approximate the WEST->SOUTH left-turn sweep (southwest quadrant).
+ * This represents the path the ego vehicle sweeps through when turning left.
  */
-export function leftTurnCorridor(
+function leftTurnCorridor(
   intersectionCenterX: number,
   intersectionCenterY: number,
   roadWidth: number
 ): AABB {
   const halfRoad = roadWidth / 2;
 
-  // The turn corridor spans from the west approach through the center to the north exit
-  // A simple bounding box covering the turn path:
+  // The turn corridor spans the southwest quadrant
   return {
-    x: intersectionCenterX - roadWidth * 0.7,  // Extend into west approach
-    y: intersectionCenterY - roadWidth * 0.7,  // Extend into north exit
-    w: roadWidth * 0.7,                         // Width of turn path
-    h: roadWidth * 0.7                          // Height of turn path
+    x: intersectionCenterX - halfRoad,
+    y: intersectionCenterY,
+    w: halfRoad,
+    h: halfRoad
   };
 }
 
 /**
- * Get pedestrian bounding box based on crosswalk location
+ * Get crosswalk bounding box for north or south crosswalk
  */
-export function getPedestrianBounds(
-  crosswalkId: string,
+function crosswalkRect(
   intersectionCenterX: number,
   intersectionCenterY: number,
   roadWidth: number,
+  crosswalkId: 'north' | 'south',
   crosswalkWidth: number = 60,
   crosswalkHeight: number = 12
 ): AABB {
   const halfRoad = roadWidth / 2;
 
-  switch (crosswalkId) {
-    case 'north':
-      return {
-        x: intersectionCenterX - crosswalkWidth / 2,
-        y: intersectionCenterY - halfRoad - crosswalkHeight / 2,
-        w: crosswalkWidth,
-        h: crosswalkHeight
-      };
-    case 'south':
-      return {
-        x: intersectionCenterX - crosswalkWidth / 2,
-        y: intersectionCenterY + halfRoad - crosswalkHeight / 2,
-        w: crosswalkWidth,
-        h: crosswalkHeight
-      };
-    case 'east':
-      return {
-        x: intersectionCenterX + halfRoad - crosswalkHeight / 2,
-        y: intersectionCenterY - crosswalkWidth / 2,
-        w: crosswalkHeight,
-        h: crosswalkWidth
-      };
-    case 'west':
-      return {
-        x: intersectionCenterX - halfRoad - crosswalkHeight / 2,
-        y: intersectionCenterY - crosswalkWidth / 2,
-        w: crosswalkHeight,
-        h: crosswalkWidth
-      };
-    default:
-      // Fallback to north
-      return {
-        x: intersectionCenterX - crosswalkWidth / 2,
-        y: intersectionCenterY - halfRoad - crosswalkHeight / 2,
-        w: crosswalkWidth,
-        h: crosswalkHeight
-      };
+  if (crosswalkId === 'north') {
+    return {
+      x: intersectionCenterX - crosswalkWidth / 2,
+      y: intersectionCenterY - halfRoad - crosswalkHeight / 2,
+      w: crosswalkWidth,
+      h: crosswalkHeight
+    };
+  } else {
+    // south
+    return {
+      x: intersectionCenterX - crosswalkWidth / 2,
+      y: intersectionCenterY + halfRoad - crosswalkHeight / 2,
+      w: crosswalkWidth,
+      h: crosswalkHeight
+    };
   }
 }
 
 /**
- * Check if pedestrian blocks the left turn based on spatial intersection
+ * Check if a pedestrian on the given crosswalk blocks the left turn.
+ * Only south crosswalk intersects the turn corridor.
  */
-export function isPedBlockingLeftTurn(
-  trial: Trial,
+function pedBlocksLeftTurn(
   intersectionCenterX: number,
   intersectionCenterY: number,
-  roadWidth: number
+  roadWidth: number,
+  crosswalkId: 'north' | 'south'
 ): boolean {
-  // No pedestrian present
-  if (trial.pedestrian !== 'CROSSING') {
-    return false;
-  }
-
-  // Determine which crosswalk the pedestrian is on
-  let crosswalkId = 'east';  // default (safe - doesn't block)
-
-  if (trial.pedestrian_side === 'left') {
-    crosswalkId = 'west';
-  } else if (trial.pedestrian_side === 'right') {
-    crosswalkId = 'east';
-  }
-
-  // Get the turn corridor and pedestrian bounds
   const turnPath = leftTurnCorridor(intersectionCenterX, intersectionCenterY, roadWidth);
-  const pedBounds = getPedestrianBounds(crosswalkId, intersectionCenterX, intersectionCenterY, roadWidth);
+  const cwRect = crosswalkRect(intersectionCenterX, intersectionCenterY, roadWidth, crosswalkId);
 
-  // Check if pedestrian intersects with turn path
-  return aabbIntersects(turnPath, pedBounds);
+  return aabbIntersects(turnPath, cwRect);
+}
+
+/**
+ * Map legacy fields to north/south.
+ * This duplicates the logic in CanvasRenderer for consistency.
+ */
+function getPedestrianCrosswalkId(trial: Trial): 'north' | 'south' {
+  // 1) Explicit new field wins
+  if (trial.pedestrian_crosswalk === 'north' || trial.pedestrian_crosswalk === 'south') {
+    return trial.pedestrian_crosswalk;
+  }
+
+  // 2) Back-compat mappings
+  if (trial.pedestrian_side === 'right') return 'north';
+  if (trial.pedestrian_side === 'left') return 'south';
+
+  if (trial.pedestrian_direction === 'east') return 'north';
+  if (trial.pedestrian_direction === 'west') return 'south';
+  if (trial.pedestrian_direction === 'south' || trial.pedestrian_direction === 'north') {
+    return trial.pedestrian_direction;
+  }
+
+  // 3) Default to far side (non-blocking)
+  return 'north';
 }
 
 /**
@@ -126,7 +106,7 @@ export function canLeftTurnNow(
   intersectionCenterY: number,
   roadWidth: number
 ): boolean {
-  // Rule 1: GREEN_ARROW always allows turn regardless of pedestrians or oncoming traffic
+  // Rule 1: GREEN_ARROW always allows turn (protected turn)
   if (trial.signal === 'GREEN_ARROW') {
     return true;
   }
@@ -147,8 +127,12 @@ export function canLeftTurnNow(
   }
 
   // Rule 5: Check pedestrian spatial conflict
-  if (isPedBlockingLeftTurn(trial, intersectionCenterX, intersectionCenterY, roadWidth)) {
-    return false;
+  // Only block if pedestrian is CROSSING and on a crosswalk that intersects turn path
+  if (trial.pedestrian === 'CROSSING') {
+    const crosswalkId = getPedestrianCrosswalkId(trial);
+    if (pedBlocksLeftTurn(intersectionCenterX, intersectionCenterY, roadWidth, crosswalkId)) {
+      return false;
+    }
   }
 
   // All clear - safe to turn

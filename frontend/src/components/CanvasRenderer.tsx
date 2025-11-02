@@ -396,66 +396,65 @@ function getPositionAlongLane(lane: LaneGeometry, distance: number): { x: number
 // === PEDESTRIAN POSITIONING SYSTEM ===
 
 /**
- * Calculate pedestrian position based on crossing state
+ * Calculate pedestrian position based on crossing state.
+ * Restricted to north/south crosswalks only with horizontal movement.
  */
-function calculatePedestrianPosition(layout: IntersectionLayout, isCrossing: boolean, crosswalkId: string = 'north'): PedestrianState {
+function calculatePedestrianPosition(layout: IntersectionLayout, isCrossing: boolean, crosswalkId: 'north' | 'south'): PedestrianState {
+  const cw = layout.crosswalks.find(c => c.id === crosswalkId);
+  if (!cw) {
+    // Fallback if crosswalk not found
+    return { isOnCrosswalk: false, crosswalkId, progress: 0, x: layout.centerX, y: layout.centerY };
+  }
+
   if (!isCrossing) {
-    // Position pedestrian waiting at crosswalk edge
-    const crosswalk = layout.crosswalks.find(cw => cw.id === crosswalkId);
-    if (!crosswalk) {
-      return { isOnCrosswalk: false, crosswalkId, progress: 0, x: 0, y: 0 };
-    }
-    
-    // Position at crosswalk edge (waiting)
+    // Wait just above/below the bar
     return {
       isOnCrosswalk: false,
       crosswalkId,
       progress: 0,
-      x: crosswalk.centerX,
-      y: crosswalk.centerY - crosswalk.height / 2 - 15 // 15px away from crosswalk
+      x: cw.centerX - cw.width / 2,
+      y: cw.centerY - (crosswalkId === 'north' ? cw.height : -cw.height) - 10
     };
   }
-  
-  // Pedestrian is crossing - move along crosswalk
-  const crosswalk = layout.crosswalks.find(cw => cw.id === crosswalkId);
-  if (!crosswalk) {
-    return { isOnCrosswalk: true, crosswalkId, progress: 0.5, x: layout.centerX, y: layout.centerY };
-  }
-  
-  // Simple crossing animation (could be enhanced with time-based progress)
+
+  // Crossing: move left->right across the bar
   const progress = 0.5; // Mid-crossing for now
-  const crosswalkLength = crosswalk.width;
-  const startX = crosswalk.centerX - crosswalkLength / 2;
-  const endX = crosswalk.centerX + crosswalkLength / 2;
-  
+  const startX = cw.centerX - cw.width / 2;
+  const endX = cw.centerX + cw.width / 2;
+
   return {
     isOnCrosswalk: true,
     crosswalkId,
     progress,
     x: startX + (endX - startX) * progress,
-    y: crosswalk.centerY
+    y: cw.centerY
   };
 }
 
 /**
- * Determine pedestrian crosswalk from trial data
+ * Determine pedestrian crosswalk from trial data.
+ * Always returns 'north' or 'south' only.
  */
-function getPedestrianCrosswalkId(trial: Trial): string {
-  // Use new pedestrian_side field
-  if (trial.pedestrian_side === 'left') {
-    return 'west';  // left of ego approach = west crosswalk
-  }
-  if (trial.pedestrian_side === 'right') {
-    return 'east';  // right of ego approach = east crosswalk
+function getPedestrianCrosswalkId(trial: Trial): 'north' | 'south' {
+  // 1) Explicit new field wins
+  if (trial.pedestrian_crosswalk === 'north' || trial.pedestrian_crosswalk === 'south') {
+    return trial.pedestrian_crosswalk;
   }
 
-  // Backward compatibility: check old pedestrian_direction field
-  if ((trial as any).pedestrian_direction) {
-    return (trial as any).pedestrian_direction.toLowerCase();
+  // 2) Back-compat mappings
+  // - 'right' or 'east'  -> far side (non-blocking) -> map to 'north'
+  // - 'left'  or 'west'  -> near/into path (blocking) -> map to 'south'
+  if (trial.pedestrian_side === 'right') return 'north';
+  if (trial.pedestrian_side === 'left') return 'south';
+
+  if (trial.pedestrian_direction === 'east') return 'north';
+  if (trial.pedestrian_direction === 'west') return 'south';
+  if (trial.pedestrian_direction === 'south' || trial.pedestrian_direction === 'north') {
+    return trial.pedestrian_direction;
   }
 
-  // Default to 'east' (right side) - safe fallback that doesn't block turn
-  return 'east';
+  // 3) Default to far side (non-blocking)
+  return 'north';
 }
 
 // === LAYER-BASED DRAWING FUNCTIONS ===
@@ -561,36 +560,27 @@ function drawLayer_Lanes(ctx: CanvasRenderingContext2D, layout: IntersectionLayo
 }
 
 /**
- * Draw crosswalks
+ * Draw crosswalks - ONLY north and south
  */
 function drawLayer_Crosswalks(ctx: CanvasRenderingContext2D, layout: IntersectionLayout, colors: any) {
   const crosswalkColor = colors?.crosswalk || '#ffffff';
+  const visibleCrosswalkIds: Array<'north' | 'south'> = ['north', 'south'];
 
-  // Render all four crosswalks (north, south, east, west)
-  layout.crosswalks.forEach(crosswalk => {
-    ctx.fillStyle = crosswalkColor;
+  layout.crosswalks
+    .filter(crosswalk => visibleCrosswalkIds.includes(crosswalk.id as any))
+    .forEach(crosswalk => {
+      ctx.fillStyle = crosswalkColor;
 
-    // Draw zebra stripes
-    const stripeWidth = 6;
-    const gapWidth = 6;
-
-    // For horizontal crosswalks (north, south), stripes run horizontally
-    // For vertical crosswalks (east, west), stripes run vertically
-    if (crosswalk.id === 'north' || crosswalk.id === 'south') {
+      // Draw zebra stripes
+      const stripeWidth = 6;
+      const gapWidth = 6;
       const numStripes = Math.floor(crosswalk.width / (stripeWidth + gapWidth));
+
       for (let i = 0; i < numStripes; i++) {
         const x = crosswalk.bounds.x + i * (stripeWidth + gapWidth);
         ctx.fillRect(x, crosswalk.bounds.y, stripeWidth, crosswalk.bounds.height);
       }
-    } else {
-      // east or west crosswalk - vertical stripes
-      const numStripes = Math.floor(crosswalk.height / (stripeWidth + gapWidth));
-      for (let i = 0; i < numStripes; i++) {
-        const y = crosswalk.bounds.y + i * (stripeWidth + gapWidth);
-        ctx.fillRect(crosswalk.bounds.x, y, crosswalk.bounds.width, stripeWidth);
-      }
-    }
-  });
+    });
 }
 
 /**
