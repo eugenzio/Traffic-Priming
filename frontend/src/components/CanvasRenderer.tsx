@@ -3,7 +3,9 @@ import { CONFIG } from '../config'
 import type { Trial } from '../types'
 
 // --- Car sprite (primary URL + fallback) ---
-const CAR_SPRITE_URL = '/assets/ego-car.png'; // local asset to avoid CORS
+// Use remote PNG; keep base64 as fallback
+const CAR_SPRITE_URL =
+  'https://static.vecteezy.com/system/resources/thumbnails/025/310/861/small/white-suv-on-transparent-background-3d-rendering-illustration-free-png.png';
 
 // Take the long base64 string you currently set in image.src and place it here:
 const FALLBACK_CAR_BASE64 =
@@ -14,9 +16,11 @@ let CAR_IMG_CACHE: HTMLImageElement | null = null;
 async function fetchCarImage(): Promise<HTMLImageElement> {
   if (CAR_IMG_CACHE) return CAR_IMG_CACHE;
 
-  // Try local asset first (no CORS needed)
+  // Try remote CDN first
   const img = new Image();
-  // img.crossOrigin = 'anonymous'; // not needed for local public asset
+  // Avoid referer-based 403s; do NOT set crossOrigin to keep canvas unblocked if CDN lacks CORS
+  img.referrerPolicy = 'no-referrer';
+  // img.crossOrigin = 'anonymous'; // leave commented unless CDN sends ACAO
   console.info('[CAR] sprite path:', CAR_SPRITE_URL);
   const tryLoad = new Promise<HTMLImageElement>((resolve, reject) => {
     img.onload = () => resolve(img);
