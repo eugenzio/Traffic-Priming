@@ -6,6 +6,7 @@ import CanvasRenderer from './CanvasRenderer'
 import SurveyLayout from './SurveyLayout'
 import CanvasFrame from './CanvasFrame'
 import ProgressBar from './ui/ProgressBar'
+import { canLeftTurnNow } from '../utils/decision'
 
 // Safe bounds type for CanvasRenderer
 type Bounds = { x: number; y: number; w: number; h: number };
@@ -132,10 +133,23 @@ export default function TrialScreen({
   )
 }
 
-// Keep rule logic (unchanged)
+/**
+ * Determine the correct choice for a trial using improved spatial logic
+ */
 function judgeCorrect(trial: Trial): Choice {
-  if (trial.signal === 'RED' || trial.signal === 'NO_LEFT_TURN') return 'wait'
-  if (trial.oncoming_car_ttc < CONFIG.TTC_THRESHOLD_SEC) return 'wait'
-  if (trial.pedestrian === 'CROSSING') return 'wait'
-  return 'turn_left'
+  // Use typical canvas dimensions to compute intersection geometry
+  // These values match the default canvas size in CanvasRenderer
+  const canvasWidth = CONFIG.CANVAS_WIDTH * 1.2;
+  const canvasHeight = CONFIG.CANVAS_HEIGHT * 1.2;
+  const intersectionCenterX = canvasWidth / 2;
+  const intersectionCenterY = canvasHeight / 2;
+
+  // Road width as configured in CanvasRenderer
+  const ROAD_WIDTH_RATIO = 0.3;
+  const roadWidth = Math.min(canvasWidth, canvasHeight) * ROAD_WIDTH_RATIO;
+
+  // Use new spatial decision logic
+  const canTurn = canLeftTurnNow(trial, intersectionCenterX, intersectionCenterY, roadWidth);
+
+  return canTurn ? 'turn_left' : 'wait';
 }

@@ -35,6 +35,13 @@ export interface Trial {
   signal: Signal;
   oncoming_car_ttc: number; // seconds
   pedestrian: Pedestrian;
+  /**
+   * NEW: the crosswalk side where the pedestrian appears for this trial.
+   * 'left'  -> west crosswalk (left of ego approach)
+   * 'right' -> east crosswalk (right of ego approach)
+   * If omitted, defaults to 'right' (safe fallback: doesn't block turn).
+   */
+  pedestrian_side?: 'left' | 'right';
   correct: Choice; // computed helper, also computed server-side
 }
 

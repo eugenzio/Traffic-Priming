@@ -440,14 +440,22 @@ function calculatePedestrianPosition(layout: IntersectionLayout, isCrossing: boo
 /**
  * Determine pedestrian crosswalk from trial data
  */
-function getPedestrianCrosswalkId(trial: any): string {
-  // Check if trial has pedestrian direction info
-  if (trial.pedestrian_direction) {
-    return trial.pedestrian_direction.toLowerCase();
+function getPedestrianCrosswalkId(trial: Trial): string {
+  // Use new pedestrian_side field
+  if (trial.pedestrian_side === 'left') {
+    return 'west';  // left of ego approach = west crosswalk
   }
-  
-  // Default to north crosswalk (most common scenario)
-  return 'north';
+  if (trial.pedestrian_side === 'right') {
+    return 'east';  // right of ego approach = east crosswalk
+  }
+
+  // Backward compatibility: check old pedestrian_direction field
+  if ((trial as any).pedestrian_direction) {
+    return (trial as any).pedestrian_direction.toLowerCase();
+  }
+
+  // Default to 'east' (right side) - safe fallback that doesn't block turn
+  return 'east';
 }
 
 // === LAYER-BASED DRAWING FUNCTIONS ===
@@ -557,25 +565,32 @@ function drawLayer_Lanes(ctx: CanvasRenderingContext2D, layout: IntersectionLayo
  */
 function drawLayer_Crosswalks(ctx: CanvasRenderingContext2D, layout: IntersectionLayout, colors: any) {
   const crosswalkColor = colors?.crosswalk || '#ffffff';
-  
-  // Only show north and south crosswalks (not east/west)
-  const visibleCrosswalkIds = ['north', 'south'];
-  
-  layout.crosswalks
-    .filter(crosswalk => visibleCrosswalkIds.includes(crosswalk.id))
-    .forEach(crosswalk => {
-      ctx.fillStyle = crosswalkColor;
-      
-      // Draw zebra stripes
-      const stripeWidth = 6;
-      const gapWidth = 6;
+
+  // Render all four crosswalks (north, south, east, west)
+  layout.crosswalks.forEach(crosswalk => {
+    ctx.fillStyle = crosswalkColor;
+
+    // Draw zebra stripes
+    const stripeWidth = 6;
+    const gapWidth = 6;
+
+    // For horizontal crosswalks (north, south), stripes run horizontally
+    // For vertical crosswalks (east, west), stripes run vertically
+    if (crosswalk.id === 'north' || crosswalk.id === 'south') {
       const numStripes = Math.floor(crosswalk.width / (stripeWidth + gapWidth));
-      
       for (let i = 0; i < numStripes; i++) {
         const x = crosswalk.bounds.x + i * (stripeWidth + gapWidth);
         ctx.fillRect(x, crosswalk.bounds.y, stripeWidth, crosswalk.bounds.height);
       }
-    });
+    } else {
+      // east or west crosswalk - vertical stripes
+      const numStripes = Math.floor(crosswalk.height / (stripeWidth + gapWidth));
+      for (let i = 0; i < numStripes; i++) {
+        const y = crosswalk.bounds.y + i * (stripeWidth + gapWidth);
+        ctx.fillRect(crosswalk.bounds.x, y, crosswalk.bounds.width, stripeWidth);
+      }
+    }
+  });
 }
 
 /**
