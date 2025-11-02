@@ -113,7 +113,7 @@ export default function StartScreen({ onBegin }: { onBegin: () => void }) {
   return (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-        <h1 style={{ margin: 0 }}>Left-Turn Decision Study</h1>
+        <h1 style={{ margin: 0, color: 'var(--fg)' }}>Left-Turn Decision Study</h1>
         <ThemeToggle />
       </div>
 

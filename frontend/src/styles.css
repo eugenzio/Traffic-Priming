@@ -3,15 +3,12 @@
   box-sizing: border-box;
 }
 
-:root {
-  --page-bg: #ffffff;
-}
-
 html, body, #root {
   height: 100%;
   margin: 0;
   font-family: system-ui, sans-serif;
-  background: var(--page-bg);
+  background: var(--bg-page);
+  color: var(--fg);
 }
 
 @keyframes fadeIn {
@@ -37,36 +34,33 @@ html, body, #root {
 }
 
 .card {
-  border: 1px solid var(--card-border, #e5e7eb);
-  border-radius: 16px;
   padding: 24px;
-  box-shadow: var(--shadow-md, 0 2px 8px rgba(0,0,0,.04));
-  background: var(--card-bg, white);
-  color: var(--page-fg, #0f172a);
   margin-bottom: 16px;
 }
 
-.btn { 
-  padding: 12px 20px; 
-  border-radius: 10px; 
-  border: 1px solid #111; 
-  background: #fff; 
-  cursor: pointer; 
+.btn {
+  padding: 12px 20px;
+  border-radius: 10px;
+  border: 1px solid var(--fg);
+  background: var(--card-bg);
+  color: var(--fg);
+  cursor: pointer;
   font-size: 16px;
   transition: all 0.2s ease;
 }
 
 .btn:hover {
-  background: #f5f5f5;
+  background: var(--input-border);
 }
 
-.btn.primary { 
-  background: #111; 
-  color: #fff; 
+.btn.primary {
+  background: var(--fg);
+  color: var(--card-bg);
+  border-color: var(--fg);
 }
 
 .btn.primary:hover {
-  background: #333;
+  opacity: 0.9;
 }
 
 .btn:disabled {
@@ -74,12 +68,13 @@ html, body, #root {
   cursor: not-allowed;
 }
 
-.kbd { 
-  border: 1px solid #ddd; 
-  padding: 4px 8px; 
-  border-radius: 6px; 
+.kbd {
+  border: 1px solid var(--input-border);
+  padding: 4px 8px;
+  border-radius: 6px;
   font-family: ui-monospace, monospace;
-  background: #f5f5f5;
+  background: var(--input-disabled-bg);
+  color: var(--fg);
   font-size: 14px;
 }
 
@@ -88,20 +83,10 @@ html, body, #root {
   gap: 16px; 
 }
 
+/* Note: input and select base styles are in theme.css */
 input, select {
-  padding: 12px;
-  border: 1px solid var(--card-border, #ddd);
-  border-radius: 8px;
-  font-size: 16px;
   width: 100%;
-  background: var(--card-bg, white);
-  color: var(--page-fg, #0f172a);
-}
-
-input:focus, select:focus {
-  outline: none;
-  border-color: var(--page-fg, #111);
-  box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
+  font-size: 16px;
 }
 
 label {
@@ -142,15 +127,16 @@ p {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f8fafc;
+  background: var(--input-disabled-bg);
   border-radius: 12px;
-  border: 2px dashed #e5e7eb;
+  border: 2px dashed var(--card-border);
+  color: var(--fg);
 }
 
 .countdown {
   font-size: 3rem;
   font-weight: bold;
-  color: #dc2626;
+  color: var(--accent);
   text-align: center;
   margin: 20px 0;
 }
@@ -162,20 +148,21 @@ p {
 }
 
 canvas {
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--card-border);
   border-radius: 12px;
-  background: #f9fafb;
+  background: var(--input-disabled-bg);
 }
 
 .instructions {
   text-align: center;
   margin: 20px 0;
   font-size: 1.1rem;
+  color: var(--fg);
 }
 
 .fixation-cross {
   font-size: 4rem;
-  color: #666;
+  color: var(--fg-muted);
   text-align: center;
   margin: 40px 0;
 }
@@ -185,12 +172,13 @@ canvas {
 }
 
 .consent-text {
-  background: #f8fafc;
+  background: var(--input-disabled-bg);
   padding: 16px;
   border-radius: 8px;
   margin: 16px 0;
   font-size: 14px;
   line-height: 1.5;
+  color: var(--fg);
 }
 
 .export-section {
@@ -199,11 +187,11 @@ canvas {
 }
 
 .export-btn {
-  background: #059669;
-  color: white;
+  background: var(--accent);
+  color: var(--card-bg);
   border: none;
 }
 
 .export-btn:hover {
-  background: #047857;
+  opacity: 0.9;
 }

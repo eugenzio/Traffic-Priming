@@ -17,11 +17,11 @@ export default function SurveyLayout({
   footerRight?: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen" style={{ background: 'var(--page-bg)', color: 'var(--page-fg)' }}>
+    <div className="min-h-screen" style={{ background: 'var(--bg-page)', color: 'var(--fg)' }}>
       <div className="mx-auto max-w-[1100px] px-4 sm:px-6 lg:px-8 py-8 md:py-10">
         <header className="mb-6 md:mb-8">
           <div className="flex items-start justify-between gap-4 mb-3">
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight" style={{ color: 'var(--page-fg)' }}>
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>
               {title}
             </h1>
             <ThemeToggle />
@@ -33,7 +33,7 @@ export default function SurveyLayout({
         <main>{children}</main>
 
         <footer className="mt-8 md:mt-10 flex items-center justify-between flex-wrap gap-4">
-          <div className="text-sm text-gray-500">{footerLeft}</div>
+          <div className="text-sm" style={{ color: 'var(--fg-muted)' }}>{footerLeft}</div>
           <div>{footerRight}</div>
         </footer>
       </div>

@@ -3,13 +3,32 @@
 /* Light theme (default) */
 :root {
   /* Page */
-  --page-bg: #ffffff;
-  --page-fg: #0f172a;
+  --bg-page: #ffffff;
+  --fg: #0f172a;                /* main text */
+  --fg-muted: #334155;          /* labels */
+  --fg-subtle: #64748b;         /* helper text */
+  --link: #0ea5e9;
+  --link-hover: #0284c7;
+
+  /* Containers */
   --card-bg: #ffffff;
   --card-border: #e5e7eb;
 
-  /* Canvas (scene) */
-  --bg: #0b0f14;            /* asphalt */
+  /* Inputs */
+  --input-bg: #ffffff;
+  --input-fg: #0f172a;
+  --input-border: #cbd5e1;
+  --input-placeholder: #94a3b8;
+  --input-disabled-bg: #f1f5f9;
+  --input-disabled-fg: #94a3b8;
+
+  /* Accent */
+  --accent: #10b981;
+  --accent-contrast: #053321;
+  --ring: 0 0 0 3px rgba(16,185,129,.25);
+
+  /* Canvas (scene) - unchanged dark palette */
+  --bg: #0b0f14;
   --road: #1c2532;
   --lane: #3a4352;
   --grid: rgba(0,0,0,0.04);
@@ -24,26 +43,103 @@
   --car-urgent: #ef4444;
   --car-safe: #60a5fa;
 
-  /* Misc */
+  /* Shadows */
   --shadow-sm: 0 1px 2px rgba(0,0,0,.06);
   --shadow-md: 0 4px 12px rgba(0,0,0,.12);
 }
 
 /* Dark theme override */
 [data-theme="dark"] {
-  --page-bg: #0b0f14;
-  --page-fg: #e5e7eb;
+  --bg-page: #0b0f14;
+  --fg: #e5e7eb;
+  --fg-muted: #cbd5e1;
+  --fg-subtle: #94a3b8;
+  --link: #7dd3fc;
+  --link-hover: #38bdf8;
+
   --card-bg: #0f172a;
   --card-border: #1f2937;
 
-  /* Canvas text/chips slightly brighter for dark mode */
+  --input-bg: #0f172a;
+  --input-fg: #e5e7eb;
+  --input-border: #334155;
+  --input-placeholder: #94a3b8;
+  --input-disabled-bg: #111827;
+  --input-disabled-fg: #64748b;
+
   --text: #e5e7eb;
   --chip-bg: #111827;
   --chip-fg: #e5e7eb;
+
+  /* Native dark mode metrics */
+  color-scheme: dark;
 }
 
 html, body {
-  background: var(--page-bg);
-  color: var(--page-fg);
+  background: var(--bg-page);
+  color: var(--fg);
   transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Global form + card styles */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--shadow-md);
+  border-radius: 12px;
+  color: var(--fg);
+}
+
+.label, .field-label {
+  color: var(--fg-muted);
+  font-weight: 600;
+}
+
+.helper, .hint, .subtext {
+  color: var(--fg-subtle);
+}
+
+input[type="text"],
+input[type="number"],
+input[type="email"],
+select,
+textarea {
+  background: var(--input-bg);
+  color: var(--input-fg);
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--input-placeholder);
+  opacity: 1; /* ensure not faded on Safari */
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background: var(--input-disabled-bg);
+  color: var(--input-disabled-fg);
+  cursor: not-allowed;
+}
+
+a {
+  color: var(--link);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--link-hover);
+  text-decoration: underline;
 }
