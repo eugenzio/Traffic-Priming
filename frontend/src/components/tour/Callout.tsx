@@ -1,4 +1,5 @@
 import React from 'react';
+import { UI_LIGHT } from '../../styles/uiTheme';
 
 export interface CalloutProps {
   title: string;
@@ -57,13 +58,13 @@ export function Callout({ title, body, x, y, side = 'e', stepNumber, totalSteps 
         left: `${left}px`,
         top: `${top}px`,
         transform,
-        width: `${cardWidth}px`,
-        padding: `${cardPadding}px`,
-        background: '#1f2937',
-        border: '2px solid #60a5fa',
-        borderRadius: '8px',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
-        color: '#e5e7eb',
+        maxWidth: '320px',
+        padding: '14px',
+        background: UI_LIGHT.cardBg,
+        color: UI_LIGHT.text,
+        border: `1px solid ${UI_LIGHT.cardBorder}`,
+        borderRadius: '12px',
+        boxShadow: UI_LIGHT.shadow,
         fontSize: '14px',
         lineHeight: '1.5',
         zIndex: 1000,
@@ -75,7 +76,7 @@ export function Callout({ title, body, x, y, side = 'e', stepNumber, totalSteps 
           style={{
             fontSize: '11px',
             fontWeight: 600,
-            color: '#9ca3af',
+            color: UI_LIGHT.subtext,
             marginBottom: '8px',
             textTransform: 'uppercase',
             letterSpacing: '0.05em'
@@ -90,7 +91,7 @@ export function Callout({ title, body, x, y, side = 'e', stepNumber, totalSteps 
           marginBottom: '8px',
           fontSize: '16px',
           fontWeight: 700,
-          color: '#ffffff'
+          color: UI_LIGHT.text
         }}
       >
         {title}
@@ -99,7 +100,7 @@ export function Callout({ title, body, x, y, side = 'e', stepNumber, totalSteps 
         style={{
           margin: 0,
           fontSize: '14px',
-          color: '#d1d5db'
+          color: UI_LIGHT.subtext
         }}
       >
         {body}

@@ -1,6 +1,7 @@
 import React, { useEffect, useCallback } from 'react';
 import type { Anchor } from '../CanvasRenderer';
 import { Callout } from './Callout';
+import { UI_LIGHT } from '../../styles/uiTheme';
 import type { TourStep } from './StepList';
 
 export interface CanvasTourOverlayProps {
@@ -156,13 +157,23 @@ export function CanvasTourOverlay({
           disabled={current === 0}
           style={{
             padding: '10px 20px',
-            background: current === 0 ? '#374151' : '#1f2937',
-            border: '1px solid #4b5563',
+            background: current === 0 ? '#f9fafb' : '#ffffff',
+            border: `1px solid ${UI_LIGHT.panelBorder}`,
             borderRadius: '6px',
-            color: current === 0 ? '#6b7280' : '#e5e7eb',
+            color: current === 0 ? UI_LIGHT.subtext : UI_LIGHT.text,
             fontSize: '14px',
             fontWeight: 600,
-            cursor: current === 0 ? 'not-allowed' : 'pointer'
+            cursor: current === 0 ? 'not-allowed' : 'pointer',
+            outline: 'none'
+          }}
+          onFocus={(e) => {
+            if (current !== 0) {
+              e.currentTarget.style.outlineColor = UI_LIGHT.focus;
+              e.currentTarget.style.outline = `2px solid ${UI_LIGHT.focus}`;
+            }
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.outline = 'none';
           }}
         >
           ← Previous
@@ -172,13 +183,21 @@ export function CanvasTourOverlay({
           onClick={onFinish}
           style={{
             padding: '10px 20px',
-            background: '#374151',
-            border: '1px solid #4b5563',
+            background: '#ffffff',
+            border: `1px solid ${UI_LIGHT.panelBorder}`,
             borderRadius: '6px',
-            color: '#e5e7eb',
+            color: UI_LIGHT.text,
             fontSize: '14px',
             fontWeight: 600,
-            cursor: 'pointer'
+            cursor: 'pointer',
+            outline: 'none'
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.outlineColor = UI_LIGHT.focus;
+            e.currentTarget.style.outline = `2px solid ${UI_LIGHT.focus}`;
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.outline = 'none';
           }}
         >
           Skip Guide
@@ -189,13 +208,21 @@ export function CanvasTourOverlay({
             onClick={() => onChange(current + 1)}
             style={{
               padding: '10px 20px',
-              background: '#60a5fa',
-              border: '1px solid #3b82f6',
+              background: '#ffffff',
+              border: `1px solid ${UI_LIGHT.panelBorder}`,
               borderRadius: '6px',
-              color: '#ffffff',
+              color: UI_LIGHT.text,
               fontSize: '14px',
               fontWeight: 600,
-              cursor: 'pointer'
+              cursor: 'pointer',
+              outline: 'none'
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.outlineColor = UI_LIGHT.focus;
+              e.currentTarget.style.outline = `2px solid ${UI_LIGHT.focus}`;
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.outline = 'none';
             }}
           >
             Next →
@@ -205,13 +232,21 @@ export function CanvasTourOverlay({
             onClick={onFinish}
             style={{
               padding: '10px 20px',
-              background: '#10b981',
-              border: '1px solid #059669',
+              background: UI_LIGHT.chipBg,
+              border: `1px solid ${UI_LIGHT.chipBg}`,
               borderRadius: '6px',
-              color: '#ffffff',
+              color: UI_LIGHT.chipFg,
               fontSize: '14px',
               fontWeight: 600,
-              cursor: 'pointer'
+              cursor: 'pointer',
+              outline: 'none'
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.outlineColor = UI_LIGHT.focus;
+              e.currentTarget.style.outline = `2px solid ${UI_LIGHT.focus}`;
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.outline = 'none';
             }}
           >
             Start Survey →

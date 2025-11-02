@@ -1,4 +1,5 @@
 import React from 'react';
+import { UI_LIGHT } from '../../styles/uiTheme';
 
 export interface TourStep {
   id: string;
@@ -24,10 +25,11 @@ export function StepList({ steps, current, onChange }: StepListProps) {
       role="navigation"
       aria-label="Tour steps"
       style={{
-        padding: '16px',
-        background: '#111827',
-        borderRadius: '8px',
-        border: '1px solid #374151'
+        background: UI_LIGHT.panelBg,
+        border: `1px solid ${UI_LIGHT.panelBorder}`,
+        borderRadius: '12px',
+        boxShadow: UI_LIGHT.shadow,
+        padding: '16px'
       }}
     >
       <h3
@@ -36,7 +38,7 @@ export function StepList({ steps, current, onChange }: StepListProps) {
           marginBottom: '16px',
           fontSize: '14px',
           fontWeight: 600,
-          color: '#9ca3af',
+          color: UI_LIGHT.subtext,
           textTransform: 'uppercase',
           letterSpacing: '0.05em'
         }}
@@ -68,10 +70,10 @@ export function StepList({ steps, current, onChange }: StepListProps) {
                   alignItems: 'center',
                   gap: '12px',
                   padding: '10px 12px',
-                  background: isCurrent ? '#1f2937' : 'transparent',
-                  border: isCurrent ? '2px solid #60a5fa' : '1px solid #374151',
+                  background: isCurrent ? '#ffffff' : '#ffffff',
+                  border: isCurrent ? `2px solid ${UI_LIGHT.focus}` : `1px solid ${UI_LIGHT.panelBorder}`,
                   borderRadius: '6px',
-                  color: isCurrent ? '#ffffff' : '#d1d5db',
+                  color: UI_LIGHT.text,
                   fontSize: '13px',
                   fontWeight: isCurrent ? 600 : 400,
                   textAlign: 'left',
@@ -80,14 +82,14 @@ export function StepList({ steps, current, onChange }: StepListProps) {
                 }}
                 onMouseEnter={(e) => {
                   if (!isCurrent) {
-                    e.currentTarget.style.background = '#1f2937';
-                    e.currentTarget.style.borderColor = '#4b5563';
+                    e.currentTarget.style.background = '#f9fafb';
+                    e.currentTarget.style.borderColor = UI_LIGHT.panelBorder;
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!isCurrent) {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.borderColor = '#374151';
+                    e.currentTarget.style.background = '#ffffff';
+                    e.currentTarget.style.borderColor = UI_LIGHT.panelBorder;
                   }
                 }}
               >
@@ -98,8 +100,8 @@ export function StepList({ steps, current, onChange }: StepListProps) {
                     width: '18px',
                     height: '18px',
                     borderRadius: '50%',
-                    border: isCompleted ? '2px solid #10b981' : '2px solid #4b5563',
-                    background: isCompleted ? '#10b981' : isCurrent ? '#60a5fa' : 'transparent',
+                    border: isCompleted ? '2px solid #10b981' : `2px solid ${UI_LIGHT.panelBorder}`,
+                    background: isCompleted ? '#10b981' : isCurrent ? UI_LIGHT.focus : 'transparent',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',

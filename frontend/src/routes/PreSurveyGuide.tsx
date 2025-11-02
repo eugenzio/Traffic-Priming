@@ -3,6 +3,7 @@ import CanvasRenderer, { computeTourAnchors } from '../components/CanvasRenderer
 import { CanvasTourOverlay } from '../components/tour/CanvasTourOverlay';
 import { StepList, type TourStep } from '../components/tour/StepList';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { UI_LIGHT } from '../styles/uiTheme';
 import type { Trial } from '../types';
 
 const TOUR_VERSION = 'v1';
@@ -144,10 +145,10 @@ export default function PreSurveyGuide({ onBack, onContinue }: PreSurveyGuidePro
   return (
     <div
       style={{
+        background: UI_LIGHT.pageBg,
+        color: UI_LIGHT.text,
         minHeight: '100vh',
-        background: '#0b0f14',
-        color: '#e5e7eb',
-        padding: '40px 20px'
+        padding: '32px 24px'
       }}
     >
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
@@ -160,18 +161,17 @@ export default function PreSurveyGuide({ onBack, onContinue }: PreSurveyGuidePro
               marginBottom: '16px',
               fontSize: '32px',
               fontWeight: 700,
-              color: '#ffffff'
+              color: UI_LIGHT.text
             }}
           >
             How this interface works
           </h1>
           <p
             style={{
-              margin: 0,
-              fontSize: '16px',
-              color: '#9ca3af',
-              maxWidth: '600px',
               margin: '0 auto',
+              fontSize: '16px',
+              color: UI_LIGHT.subtext,
+              maxWidth: '600px',
               lineHeight: '1.6'
             }}
           >
@@ -240,19 +240,19 @@ export default function PreSurveyGuide({ onBack, onContinue }: PreSurveyGuidePro
             justifyContent: 'space-between',
             alignItems: 'center',
             padding: '20px',
-            background: '#111827',
-            borderRadius: '8px',
-            border: '1px solid #374151'
+            background: UI_LIGHT.pageBg,
+            borderTop: `1px solid ${UI_LIGHT.divider}`,
+            borderRadius: '8px'
           }}
         >
           <button
             onClick={onBack}
             style={{
               padding: '12px 24px',
-              background: '#374151',
-              border: '1px solid #4b5563',
+              background: UI_LIGHT.pageBg,
+              border: `1px solid ${UI_LIGHT.panelBorder}`,
               borderRadius: '6px',
-              color: '#e5e7eb',
+              color: UI_LIGHT.text,
               fontSize: '14px',
               fontWeight: 600,
               cursor: 'pointer'
@@ -267,7 +267,7 @@ export default function PreSurveyGuide({ onBack, onContinue }: PreSurveyGuidePro
               alignItems: 'center',
               gap: '8px',
               fontSize: '14px',
-              color: '#9ca3af',
+              color: UI_LIGHT.subtext,
               cursor: 'pointer'
             }}
           >
@@ -284,10 +284,10 @@ export default function PreSurveyGuide({ onBack, onContinue }: PreSurveyGuidePro
             onClick={handleSkip}
             style={{
               padding: '12px 24px',
-              background: '#10b981',
-              border: '1px solid #059669',
+              background: UI_LIGHT.chipBg,
+              border: `1px solid ${UI_LIGHT.chipBg}`,
               borderRadius: '6px',
-              color: '#ffffff',
+              color: UI_LIGHT.chipFg,
               fontSize: '14px',
               fontWeight: 600,
               cursor: 'pointer'
