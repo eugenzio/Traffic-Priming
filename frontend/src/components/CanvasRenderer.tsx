@@ -103,8 +103,8 @@ interface CanvasRendererProps {
 }
 
 // === CAR IMAGE ORIENTATION ===
-// The white sedan PNG faces RIGHT (East) at rest.
-const CAR_IMAGE_ORIENTATION = 0;
+// The white sedan PNG faces UP (North) at rest.
+const CAR_IMAGE_ORIENTATION = -Math.PI / 2;
 
 // === EDGE BLEED ===
 const EDGE_BLEED = 2; // px – draw roads past the canvas edge
@@ -678,17 +678,15 @@ function drawLayer_Vehicles(
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
 
-      // keep the car length stable and compute width by natural AR
-      const targetLength = 72; // long side of the car (front↔back)
+      // Scale so the longest side is 72px, preserving aspect ratio
       const natW = carImage.naturalWidth || 1;
       const natH = carImage.naturalHeight || 1;
-      const ar = natW / natH;
+      const longest = Math.max(natW, natH);
+      const scale = 72 / longest;
+      const drawW = Math.round(natW * scale);
+      const drawH = Math.round(natH * scale);
 
-      // If the image is "top view, pointing up", height is the long side.
-      const H = targetLength;
-      const W = Math.max(28, Math.round(H * ar)); // keep a minimum to avoid too thin
-
-      ctx.drawImage(carImage, -W / 2, -H / 2, W, H);
+      ctx.drawImage(carImage, -drawW / 2, -drawH / 2, drawW, drawH);
     } else {
       // fallback 렌더 (앞쪽 표식: 왼쪽이 전방)
       ctx.fillStyle = carColor;
