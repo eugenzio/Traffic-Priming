@@ -103,8 +103,8 @@ interface CanvasRendererProps {
 }
 
 // === CAR IMAGE ORIENTATION ===
-// 자동차 원본 이미지가 "오른쪽"을 보고 있다면 0, "왼쪽"이면 Math.PI, "위"면 -Math.PI/2, "아래"면 Math.PI/2
-const CAR_IMAGE_ORIENTATION = -Math.PI / 2; // 원본이 "위"를 보고 있음 (Up)
+// The white sedan PNG faces RIGHT (East) at rest.
+const CAR_IMAGE_ORIENTATION = 0;
 
 // === EDGE BLEED ===
 const EDGE_BLEED = 2; // px – draw roads past the canvas edge
@@ -321,7 +321,7 @@ function calculateOncomingCarPosition(layout: IntersectionLayout, ttc: number): 
   const y = eastLane.startPoint.y + (eastLane.endPoint.y - eastLane.startPoint.y) * progress;
   
   // Calculate angle based on lane direction - make car point left (west direction)
-  const angle = Math.PI; // 180 degrees = pointing left (west)
+  const angle = Math.PI; // 180° → LEFT (west)
   
   return {
     laneId: 'EAST',
@@ -663,7 +663,6 @@ function drawLayer_Vehicles(
     ctx.rotate(normalizeAngle(angle - CAR_IMAGE_ORIENTATION)); // Use (target angle - source angle)
 
     if (carImage) {
-      // High-quality scaling
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
 
