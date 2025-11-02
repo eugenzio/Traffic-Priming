@@ -1217,3 +1217,44 @@ export default function CanvasRenderer({
     </div>
   )
 }
+
+// === TOUR ANCHOR SYSTEM ===
+
+export type Anchor = { id: string; x: number; y: number; label: string };
+
+/**
+ * Compute anchor points for the interactive tour overlay.
+ * This mirrors the renderer's geometry without touching canvas internals.
+ */
+export function computeTourAnchors(
+  canvasWidth: number,
+  canvasHeight: number,
+  trial: Trial,
+  safeBounds?: { x: number; y: number; w: number; h: number }
+): Record<string, Anchor> {
+  const B = safeBounds ?? { x: 0, y: 0, w: canvasWidth, h: canvasHeight };
+  const layout = initializeIntersectionLayout(canvasWidth, canvasHeight, B);
+  const oncoming = calculateOncomingCarPosition(layout, trial.oncoming_car_ttc);
+
+  const half = layout.roadWidth / 2;
+  const cwNorth = layout.crosswalks.find(c => c.id === 'north')!;
+  const cwSouth = layout.crosswalks.find(c => c.id === 'south')!;
+  const signalX = layout.centerX - half - 30;
+  const signalY = layout.centerY - half - 30;
+
+  return {
+    trafficLight: { id: 'trafficLight', x: signalX, y: signalY - 60, label: 'Traffic light' },
+    signalLens:   { id: 'signalLens',   x: signalX, y: signalY,      label: 'Active lens' },
+    oncomingCar:  { id: 'oncomingCar',  x: oncoming.x, y: oncoming.y, label: 'Oncoming vehicle' },
+    ttcBadge:     { id: 'ttcBadge',     x: oncoming.x + 64, y: oncoming.y - 42, label: 'Time-to-Collision (TTC)' },
+    chevrons:     { id: 'chevrons',     x: oncoming.x - 24, y: oncoming.y - 10, label: 'Motion chevrons' },
+    lanesH:       { id: 'lanesH',       x: layout.centerX, y: layout.centerY + 6, label: 'Lane centerlines' },
+    roadEdges:    { id: 'roadEdges',    x: layout.centerX + half + 6, y: layout.centerY + half + 6, label: 'Road edges' },
+    grassNW:      { id: 'grassNW',      x: B.x + 40, y: B.y + 40, label: 'Corner grass' },
+    crosswalkN:   { id: 'crosswalkN',   x: cwNorth.centerX, y: cwNorth.centerY, label: 'Crosswalk (north)' },
+    crosswalkS:   { id: 'crosswalkS',   x: cwSouth.centerX, y: cwSouth.centerY, label: 'Crosswalk (south)' },
+    crossingTxt:  { id: 'crossingTxt',  x: layout.centerX, y: layout.centerY + 40, label: 'Pedestrian "CROSSING"' },
+    vignette:     { id: 'vignette',     x: layout.centerX, y: layout.centerY, label: 'Attention vignette' },
+    debugMark:    { id: 'debugMark',    x: oncoming.x, y: oncoming.y - 16, label: 'Dev crosshair' }
+  };
+}
