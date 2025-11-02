@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import StartScreen from './components/StartScreen'
+import PreSurveyGuide from './routes/PreSurveyGuide'
 import PrimeScreen from './components/PrimeScreen'
 import TrialScreen from './components/TrialScreen'
 import ResultScreen from './components/ResultScreen'
@@ -38,7 +39,7 @@ function computeProgress(
   return { total, completedBefore, currentIndex, percent, uiBlockNumber };
 }
 
-type Phase = 'start' | 'prime' | 'trial' | 'done'
+type Phase = 'start' | 'guide' | 'prime' | 'trial' | 'done'
 
 export default function App() {
   const { blocks } = useExperiment()
@@ -78,10 +79,22 @@ export default function App() {
 
   return (
     <div className="app">
-      {/* Start: SKIP prime for the first (neutral) block — go straight to trials */}
+      {/* Start: Collect participant info, then show guide */}
       {phase === 'start' && (
         <StartScreen
-          onBegin={() => { setBi(0); setTi(0); setPhase(phaseForBlock(blocks[sequence[0]])) }}
+          onBegin={() => setPhase('guide')}
+        />
+      )}
+
+      {/* Guide: Interactive tour of the canvas interface */}
+      {phase === 'guide' && (
+        <PreSurveyGuide
+          onBack={() => setPhase('start')}
+          onContinue={() => {
+            setBi(0);
+            setTi(0);
+            setPhase(phaseForBlock(blocks[sequence[0]]));
+          }}
         />
       )}
 
