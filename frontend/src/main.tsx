@@ -9,6 +9,11 @@ import { ExperimentProvider } from './context/ExperimentProvider'
 import { ThemeProvider } from './context/ThemeProvider'
 import trialTape from './data/trial_tape.sample.json'
 
+// Theme bootstrap: set initial theme before React renders to prevent flash
+const stored = localStorage.getItem('theme');
+const initial = stored === 'dark' ? 'dark' : 'light';
+document.documentElement.setAttribute('data-theme', initial);
+
 const root = createRoot(document.getElementById('root')!)
 
 root.render(

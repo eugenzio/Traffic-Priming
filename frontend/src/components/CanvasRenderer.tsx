@@ -1195,14 +1195,13 @@ export default function CanvasRenderer({
         ref={canvasRef}
         width={canvasSize.width}
         height={canvasSize.height}
-        style={{ 
-          border: '2px solid #1f2937',
-          borderRadius: '12px',
-          background: 'transparent', // Transparent background - no green bezel
+        style={{
+          border: 'none',
+          borderRadius: '0',
+          background: 'transparent', // Transparent background - canvas draws its own
           display: 'block',
           width: '100%',
-          height: '100%',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)' // Add subtle shadow for depth
+          height: '100%'
         }}
         aria-label={`Traffic scene: ${normalizedSignal} signal, ${trial.oncoming_car_ttc.toFixed(1)}s TTC, ${trial.pedestrian === 'CROSSING' ? 'pedestrian crossing' : 'no pedestrian'}`}
       />
