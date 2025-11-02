@@ -36,12 +36,13 @@ html, body, #root {
   margin-bottom: 12px;
 }
 
-.card { 
-  border: 1px solid #e5e7eb; 
-  border-radius: 16px; 
-  padding: 24px; 
-  box-shadow: 0 2px 8px rgba(0,0,0,.04); 
-  background: white;
+.card {
+  border: 1px solid var(--card-border, #e5e7eb);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: var(--shadow-md, 0 2px 8px rgba(0,0,0,.04));
+  background: var(--card-bg, white);
+  color: var(--page-fg, #0f172a);
   margin-bottom: 16px;
 }
 
@@ -89,15 +90,17 @@ html, body, #root {
 
 input, select {
   padding: 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--card-border, #ddd);
   border-radius: 8px;
   font-size: 16px;
   width: 100%;
+  background: var(--card-bg, white);
+  color: var(--page-fg, #0f172a);
 }
 
 input:focus, select:focus {
   outline: none;
-  border-color: #111;
+  border-color: var(--page-fg, #111);
   box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
 }
 

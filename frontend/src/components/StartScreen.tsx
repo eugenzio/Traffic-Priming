@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useExperiment } from '../context/ExperimentProvider'
 import type { Participant, CountyGA } from '../types'
 import { unlockAudio } from '../utils/audio'
+import ThemeToggle from './ThemeToggle'
 
 // county groups + Outside of GA
 const COUNTY_GROUPS = {
@@ -111,8 +112,11 @@ export default function StartScreen({ onBegin }: { onBegin: () => void }) {
 
   return (
     <div className="card">
-      <h1>Left-Turn Decision Study</h1>
-      
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+        <h1 style={{ margin: 0 }}>Left-Turn Decision Study</h1>
+        <ThemeToggle />
+      </div>
+
       <div className="consent-text">
         <h3>Study Overview</h3>
         <p>
