@@ -835,61 +835,9 @@ function drawLayer_Vignette(ctx: CanvasRenderingContext2D, layout: IntersectionL
 
 // ADD-ONLY HELPERS (Canvas UX improvements)
 
-// --- DARK THEME HELPERS ---
+// --- THEME HELPERS ---
 
-// 1) Inject dark theme CSS once with enhanced tokens for visibility
-function ensureCanvasDarkStyles() {
-  if (document.getElementById('canvas-dark-styles')) return;
-  const style = document.createElement('style');
-  style.id = 'canvas-dark-styles';
-  style.textContent = `
-  [data-canvas-theme="dark"]{
-    --bg: #0b0f14;              /* asphalt */
-    --road: #1c2532;
-    --lane: #3a4352;
-    --grid: rgba(255,255,255,0.04);
-    --crosswalk: #cbd5e1;       /* slate-300 */
-    --text: #e5e7eb;            /* light slate */
-    --chip-bg: #111827;         /* badge */
-    --chip-fg: #e5e7eb;
-    --signal-body: #0f172a;
-    --signal-red: #f87171;
-    --signal-yellow: #fbbf24;
-    --signal-green: #34d399;
-    --halo-red: rgba(248,113,113,0.5);
-    --halo-yellow: rgba(251,191,36,0.5);
-    --halo-green: rgba(52,211,153,0.5);
-    --car-urgent: #ef4444;
-    --car-safe: #60a5fa;
-    
-    /* Enhanced visibility tokens */
-    --lens-size: 60px;          /* Traffic light lens diameter */
-    --lens-stroke: 2px;         /* Dark stroke width */
-    --glow-intensity: 24px;     /* Soft glow blur radius */
-    --ego-scale: 1.4;           /* Ego car scale factor */
-    --ego-offset: 12%;          /* Ego car vertical offset */
-    --badge-gap: 20px;          /* TTC badge gap from ego car */
-    --contrast-ratio: 3.1;      /* Minimum contrast ratio */
-    --vignette-opacity: 0.15;   /* Subtle vignette for focus */
-  }
-  `;
-  document.head.appendChild(style);
-}
-
-// 2) Hook to apply dark theme
-function useDarkCanvasTheme(ref: React.RefObject<HTMLElement>) {
-  useEffect(() => {
-    ensureCanvasDarkStyles();
-    const el = ref.current;
-    if (!el) return;
-    const prev = el.getAttribute('data-canvas-theme');
-    el.setAttribute('data-canvas-theme', 'dark');
-    return () => { 
-      if (prev) el.setAttribute('data-canvas-theme', prev); 
-      else el.removeAttribute('data-canvas-theme'); 
-    };
-  }, [ref]);
-}
+// Theme comes from CSS vars on :root ([data-theme]) – no forced theme here.
 
 // 3) Read theme colors from CSS variables
 function getThemeColors(root: HTMLElement | null) {
@@ -1068,9 +1016,8 @@ export default function CanvasRenderer({
   const [carImage, setCarImage] = useState<HTMLImageElement | null>(null)
   const [imageLoading, setImageLoading] = useState(true)
   const [imageError, setImageError] = useState(false)
-  
-  // Apply dark theme
-  useDarkCanvasTheme(wrapperRef)
+
+  // Theme comes from CSS vars on :root ([data-theme]) – no forced theme here.
 
   // === 자동차 이미지 로딩 ===
   useEffect(() => {
@@ -1173,8 +1120,8 @@ export default function CanvasRenderer({
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    // Get dark theme colors
-    const colors = getThemeColors(wrapperRef.current)
+    // Get theme colors from document root (respects [data-theme] attribute)
+    const colors = getThemeColors(document.documentElement)
 
     // Clear canvas with transparent background
     ctx.clearRect(0, 0, canvasSize.width, canvasSize.height)

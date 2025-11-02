@@ -1,0 +1,49 @@
+/* Theme System - Light (default) + Dark mode */
+
+/* Light theme (default) */
+:root {
+  /* Page */
+  --page-bg: #ffffff;
+  --page-fg: #0f172a;
+  --card-bg: #ffffff;
+  --card-border: #e5e7eb;
+
+  /* Canvas (scene) */
+  --bg: #0b0f14;            /* asphalt */
+  --road: #1c2532;
+  --lane: #3a4352;
+  --grid: rgba(0,0,0,0.04);
+  --crosswalk: #cbd5e1;
+  --text: #111827;
+  --chip-bg: #111827;
+  --chip-fg: #e5e7eb;
+  --signal-body: #0f172a;
+  --signal-red: #f87171;
+  --signal-yellow: #f59e0b;
+  --signal-green: #10b981;
+  --car-urgent: #ef4444;
+  --car-safe: #60a5fa;
+
+  /* Misc */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.06);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.12);
+}
+
+/* Dark theme override */
+[data-theme="dark"] {
+  --page-bg: #0b0f14;
+  --page-fg: #e5e7eb;
+  --card-bg: #0f172a;
+  --card-border: #1f2937;
+
+  /* Canvas text/chips slightly brighter for dark mode */
+  --text: #e5e7eb;
+  --chip-bg: #111827;
+  --chip-fg: #e5e7eb;
+}
+
+html, body {
+  background: var(--page-bg);
+  color: var(--page-fg);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}

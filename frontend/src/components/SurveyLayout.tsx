@@ -1,4 +1,5 @@
 import React from 'react';
+import ThemeToggle from './ThemeToggle';
 
 export default function SurveyLayout({
   title,
@@ -16,12 +17,15 @@ export default function SurveyLayout({
   footerRight?: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen" style={{ background: 'var(--page-bg)', color: 'var(--page-fg)' }}>
       <div className="mx-auto max-w-[1100px] px-4 sm:px-6 lg:px-8 py-8 md:py-10">
         <header className="mb-6 md:mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-gray-900">
-            {title}
-          </h1>
+          <div className="flex items-start justify-between gap-4 mb-3">
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight" style={{ color: 'var(--page-fg)' }}>
+              {title}
+            </h1>
+            <ThemeToggle />
+          </div>
           {subtitle && <div className="mt-2">{subtitle}</div>}
           {progress && <div className="mt-3">{progress}</div>}
         </header>

@@ -4,6 +4,7 @@ import { CanvasTourOverlay } from '../components/tour/CanvasTourOverlay';
 import { StepList, type TourStep } from '../components/tour/StepList';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { UI_LIGHT } from '../styles/uiTheme';
+import ThemeToggle from '../components/ThemeToggle';
 import type { Trial } from '../types';
 
 const TOUR_VERSION = 'v1';
@@ -153,19 +154,21 @@ export default function PreSurveyGuide({ onBack, onContinue }: PreSurveyGuidePro
     >
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         {/* Header */}
-        <div style={{ marginBottom: '32px', textAlign: 'center' }}>
-          <h1
-            id="tour-title"
-            style={{
-              margin: 0,
-              marginBottom: '16px',
-              fontSize: '32px',
-              fontWeight: 700,
-              color: UI_LIGHT.text
-            }}
-          >
-            How this interface works
-          </h1>
+        <div style={{ marginBottom: '32px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+            <h1
+              id="tour-title"
+              style={{
+                margin: 0,
+                fontSize: '32px',
+                fontWeight: 700,
+                color: UI_LIGHT.text
+              }}
+            >
+              How this interface works
+            </h1>
+            <ThemeToggle />
+          </div>
           <p
             style={{
               margin: '0 auto',
