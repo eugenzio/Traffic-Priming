@@ -672,7 +672,8 @@ function drawLayer_Vehicles(
     ctx.save();
     ctx.translate(x, y);
 
-    const rotationAngle = canvasRotationFromHeading(angle, CAR_IMAGE_ORIENTATION);
+    // Flip sprite 180° so the rear faces West at the current moment
+    const rotationAngle = canvasRotationFromHeading(angle + Math.PI, CAR_IMAGE_ORIENTATION);
 
     // Debug logging to verify rotation (report canvas rotation)
     if (process.env.NODE_ENV !== 'production') {
