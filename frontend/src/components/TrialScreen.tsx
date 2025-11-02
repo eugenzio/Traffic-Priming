@@ -113,13 +113,8 @@ export default function TrialScreen({
       footerRight={null}
     >
       <CanvasFrame>
-        <div style={{
-          width: '100%',
-          height: '450px',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          <CanvasRenderer trial={trial} />
+        <div className="w-full">
+          <CanvasRenderer trial={trial} anchorX="left" maxRightCropPx={160} />
         </div>
       </CanvasFrame>
 

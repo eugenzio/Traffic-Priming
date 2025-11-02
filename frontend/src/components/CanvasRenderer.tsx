@@ -104,6 +104,10 @@ interface CanvasRendererProps {
   width?: number
   height?: number
   safeBounds?: Bounds
+  /** NEW: where to anchor the visible viewport horizontally (default 'left') */
+  anchorX?: 'left' | 'center' | 'right'
+  /** NEW: max number of pixels to crop off the *right* when width is tight */
+  maxRightCropPx?: number
 }
 
 // === CAR IMAGE ORIENTATION ===
@@ -1019,11 +1023,13 @@ function MotionChevrons({ x = 0, y = 0, visible = true }: { x?: number; y?: numb
   );
 }
 
-export default function CanvasRenderer({ 
-  trial, 
+export default function CanvasRenderer({
+  trial,
   width = CONFIG.CANVAS_WIDTH * 1.2, // Scale up 20%
   height = CONFIG.CANVAS_HEIGHT * 1.2,
-  safeBounds
+  safeBounds,
+  anchorX = 'left',
+  maxRightCropPx = 160 // up to ~160px may be cropped from the right
 }: CanvasRendererProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -1090,7 +1096,37 @@ export default function CanvasRenderer({
   const fullBounds: Bounds = container
     ? { x: 0, y: 0, w: container.clientWidth || canvasSize.width, h: container.clientHeight || canvasSize.height }
     : { x: 0, y: 0, w: canvasSize.width, h: canvasSize.height };
-  const B: Bounds = safeBounds && safeBounds.w > 0 ? safeBounds : fullBounds;
+
+  // If caller passes safeBounds, honor it. Otherwise compute a viewport that
+  // keeps the LEFT edge fixed and crops ONLY from the RIGHT when needed.
+  let B: Bounds = safeBounds && safeBounds.w > 0 ? safeBounds : fullBounds;
+
+  // Compute a "visible width" we must guarantee on the left (keeps signal & west edge)
+  // We'll protect the left ~62% of the scene as non-croppable.
+  const protectLeftPct = 0.62;
+  const minLeftWidth = Math.round(fullBounds.w * protectLeftPct);
+
+  if (!safeBounds || safeBounds.w === 0) {
+    // If the container became narrower and would force cropping, crop on RIGHT only.
+    // Left anchor means x remains 0; we reduce width by at most maxRightCropPx.
+
+    // Ensure we never shrink the left protected region
+    const minW = Math.max(minLeftWidth, fullBounds.w - maxRightCropPx);
+    const newW = Math.max(minW, fullBounds.w);
+
+    if (anchorX === 'left') {
+      B = { x: 0, y: 0, w: Math.min(fullBounds.w, newW), h: fullBounds.h };
+    } else if (anchorX === 'center') {
+      const w = Math.min(fullBounds.w, newW);
+      const x = Math.max(0, Math.round((fullBounds.w - w) / 2));
+      B = { x, y: 0, w, h: fullBounds.h };
+    } else {
+      // anchor right (not used here, but keep complete)
+      const w = Math.min(fullBounds.w, newW);
+      const x = Math.max(0, fullBounds.w - w);
+      B = { x, y: 0, w, h: fullBounds.h };
+    }
+  }
 
   // Calculate vehicle positions for overlays using new system
   const layout = initializeIntersectionLayout(canvasSize.width, canvasSize.height, B)
@@ -1169,12 +1205,12 @@ export default function CanvasRenderer({
   // Old drawing functions removed - now using layer-based system above
 
   return (
-    <div 
+    <div
       ref={wrapperRef}
       data-canvas-theme="dark"
-      style={{ 
-        position: 'relative', 
-        display: 'inline-block',
+      style={{
+        position: 'relative',
+        display: 'block',          // block instead of inline-block to prevent horizontal gaps
         overflow: 'hidden',
         background: 'transparent'
         // Removed scale transform - it interferes with viewport math
