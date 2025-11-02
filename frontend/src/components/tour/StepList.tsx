@@ -24,21 +24,23 @@ export function StepList({ steps, current, onChange }: StepListProps) {
     <div
       role="navigation"
       aria-label="Tour steps"
+      className="tour-panel tour-checklist"
       style={{
-        background: UI_LIGHT.panelBg,
-        border: `1px solid ${UI_LIGHT.panelBorder}`,
+        background: 'var(--card-bg)',
+        border: '1px solid var(--card-border)',
         borderRadius: '12px',
-        boxShadow: UI_LIGHT.shadow,
+        boxShadow: 'var(--shadow-md)',
         padding: '16px'
       }}
     >
       <h3
+        className="tour-step-title"
         style={{
           margin: 0,
           marginBottom: '16px',
           fontSize: '14px',
           fontWeight: 600,
-          color: UI_LIGHT.subtext,
+          color: 'var(--fg-muted)',
           textTransform: 'uppercase',
           letterSpacing: '0.05em'
         }}
@@ -64,16 +66,17 @@ export function StepList({ steps, current, onChange }: StepListProps) {
               <button
                 onClick={() => onChange(index)}
                 aria-current={isCurrent ? 'step' : undefined}
+                className="row"
                 style={{
                   width: '100%',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '12px',
                   padding: '10px 12px',
-                  background: isCurrent ? '#ffffff' : '#ffffff',
-                  border: isCurrent ? `2px solid ${UI_LIGHT.focus}` : `1px solid ${UI_LIGHT.panelBorder}`,
+                  background: 'var(--card-bg)',
+                  border: isCurrent ? '2px solid var(--accent)' : '1px solid var(--card-border)',
                   borderRadius: '6px',
-                  color: UI_LIGHT.text,
+                  color: 'var(--fg)',
                   fontSize: '13px',
                   fontWeight: isCurrent ? 600 : 400,
                   textAlign: 'left',
@@ -82,31 +85,31 @@ export function StepList({ steps, current, onChange }: StepListProps) {
                 }}
                 onMouseEnter={(e) => {
                   if (!isCurrent) {
-                    e.currentTarget.style.background = '#f9fafb';
-                    e.currentTarget.style.borderColor = UI_LIGHT.panelBorder;
+                    e.currentTarget.style.background = 'var(--input-disabled-bg)';
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!isCurrent) {
-                    e.currentTarget.style.background = '#ffffff';
-                    e.currentTarget.style.borderColor = UI_LIGHT.panelBorder;
+                    e.currentTarget.style.background = 'var(--card-bg)';
                   }
                 }}
               >
                 {/* Checkbox/status indicator */}
                 <div
+                  className="radio"
+                  aria-checked={isCompleted ? 'true' : undefined}
                   style={{
                     flexShrink: 0,
                     width: '18px',
                     height: '18px',
                     borderRadius: '50%',
-                    border: isCompleted ? '2px solid #10b981' : `2px solid ${UI_LIGHT.panelBorder}`,
-                    background: isCompleted ? '#10b981' : isCurrent ? UI_LIGHT.focus : 'transparent',
+                    border: isCompleted ? '2px solid var(--accent)' : '2px solid var(--card-border)',
+                    background: isCompleted ? 'var(--accent)' : isCurrent ? 'var(--accent)' : 'transparent',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontSize: '10px',
-                    color: '#ffffff'
+                    color: 'var(--card-bg)'
                   }}
                 >
                   {isCompleted && '✓'}
@@ -116,7 +119,7 @@ export function StepList({ steps, current, onChange }: StepListProps) {
                         width: '8px',
                         height: '8px',
                         borderRadius: '50%',
-                        background: '#ffffff'
+                        background: 'var(--card-bg)'
                       }}
                     />
                   )}

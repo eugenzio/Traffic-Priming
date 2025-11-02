@@ -53,6 +53,8 @@ export function Callout({ title, body, x, y, side = 'e', stepNumber, totalSteps 
       role="region"
       aria-live="polite"
       aria-atomic="true"
+      className="tour-step-card"
+      data-role="tour-card"
       style={{
         position: 'absolute',
         left: `${left}px`,
@@ -60,11 +62,11 @@ export function Callout({ title, body, x, y, side = 'e', stepNumber, totalSteps 
         transform,
         maxWidth: '320px',
         padding: '14px',
-        background: UI_LIGHT.cardBg,
-        color: UI_LIGHT.text,
-        border: `1px solid ${UI_LIGHT.cardBorder}`,
+        background: 'var(--card-bg)',
+        color: 'var(--fg)',
+        border: '1px solid var(--card-border)',
         borderRadius: '12px',
-        boxShadow: UI_LIGHT.shadow,
+        boxShadow: 'var(--shadow-md)',
         fontSize: '14px',
         lineHeight: '1.5',
         zIndex: 1000,
@@ -73,10 +75,11 @@ export function Callout({ title, body, x, y, side = 'e', stepNumber, totalSteps 
     >
       {stepNumber !== undefined && totalSteps !== undefined && (
         <div
+          className="tour-hint"
           style={{
             fontSize: '11px',
             fontWeight: 600,
-            color: UI_LIGHT.subtext,
+            color: 'var(--fg-subtle)',
             marginBottom: '8px',
             textTransform: 'uppercase',
             letterSpacing: '0.05em'
@@ -86,21 +89,23 @@ export function Callout({ title, body, x, y, side = 'e', stepNumber, totalSteps 
         </div>
       )}
       <h3
+        className="tour-step-title"
         style={{
           margin: 0,
           marginBottom: '8px',
           fontSize: '16px',
           fontWeight: 700,
-          color: UI_LIGHT.text
+          color: 'var(--fg)'
         }}
       >
         {title}
       </h3>
       <p
+        className="tour-desc"
         style={{
           margin: 0,
           fontSize: '14px',
-          color: UI_LIGHT.subtext
+          color: 'var(--fg-subtle)'
         }}
       >
         {body}

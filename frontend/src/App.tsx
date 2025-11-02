@@ -4,6 +4,8 @@ import PreSurveyGuide from './routes/PreSurveyGuide'
 import PrimeScreen from './components/PrimeScreen'
 import TrialScreen from './components/TrialScreen'
 import ResultScreen from './components/ResultScreen'
+import ThemeToggle from './components/ThemeToggle'
+import { SectionHeader, SummaryTable, ExportButtons, Notice } from './components/ResearchUI'
 import { useExperiment } from './context/ExperimentProvider'
 import type { TrialBlock } from './types'
 
@@ -127,66 +129,92 @@ export default function App() {
 
       {phase === 'done' && (
         (() => {
-          // ADD at top of the end screen component:
           const { getSummary, getParticipantSnapshot, downloadCSV, getResearchDisclaimer } = useExperiment();
           const { total, correct, incorrect, accuracy } = getSummary();
           const p = getParticipantSnapshot();
           const disclaimer = getResearchDisclaimer();
-          
+
           return (
-            <div className="card">
-              <h2>Thanks for participating!</h2>
-              <p>You completed {total} trials (3 no-prime + 18 primed).</p>
-              
-              <div style={{ margin: '20px 0', padding: '20px', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
-                <h3>Your Results</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' }}>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '2em', fontWeight: 'bold', color: '#059669' }}>{accuracy}%</div>
-                    <div style={{ color: '#666' }}>Accuracy</div>
+            <div className="page">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-6)' }}>
+                <h1 style={{ margin: 0 }}>Study Complete</h1>
+                <ThemeToggle />
+              </div>
+
+              <div className="section">
+                <p>
+                  Thank you for participating in this research study. You completed {total} trials examining
+                  left-turn decision-making under various traffic conditions.
+                </p>
+              </div>
+
+              <div className="section">
+                <SectionHeader title="Response Summary" />
+                <div className="card">
+                  <div className="card-body">
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
+                      <div style={{ textAlign: 'center', padding: 'var(--space-4)', background: 'var(--panel)', borderRadius: 'var(--radius-md)' }}>
+                        <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 700, color: 'var(--success)', marginBottom: 'var(--space-2)' }}>
+                          {accuracy}%
+                        </div>
+                        <div className="help">Accuracy</div>
+                      </div>
+                      <div style={{ textAlign: 'center', padding: 'var(--space-4)', background: 'var(--panel)', borderRadius: 'var(--radius-md)' }}>
+                        <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 700, color: 'var(--fg)', marginBottom: 'var(--space-2)' }}>
+                          {correct}
+                        </div>
+                        <div className="help">Correct responses</div>
+                      </div>
+                      <div style={{ textAlign: 'center', padding: 'var(--space-4)', background: 'var(--panel)', borderRadius: 'var(--radius-md)' }}>
+                        <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 700, color: 'var(--fg)', marginBottom: 'var(--space-2)' }}>
+                          {total}
+                        </div>
+                        <div className="help">Total trials</div>
+                      </div>
+                    </div>
+                    <p className="help" style={{ textAlign: 'center', marginTop: 'var(--space-2)' }}>
+                      {correct} correct out of {total} trials
+                    </p>
                   </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '2em', fontWeight: 'bold', color: '#059669' }}>{correct}</div>
-                    <div style={{ color: '#666' }}>Correct Answers</div>
+                </div>
+              </div>
+
+              <div className="section">
+                <SectionHeader title="Participant Information" />
+                <div className="card">
+                  <div className="card-body">
+                    <SummaryTable
+                      data={[
+                        { label: 'Participant ID', value: p?.participant_id || 'N/A' },
+                        { label: 'Age', value: p?.age || 'N/A' },
+                        { label: 'Gender', value: p?.gender || 'N/A' },
+                        { label: 'Region', value: (p as any)?.region_ga || 'N/A' },
+                        { label: 'County', value: (p as any)?.county_ga || 'N/A' },
+                      ]}
+                    />
                   </div>
                 </div>
-                <div style={{ textAlign: 'center', color: '#666' }}>
-                  {correct} correct out of {total} total trials
+              </div>
+
+              <div className="section">
+                <SectionHeader title="Export Data" />
+                <div style={{ textAlign: 'center', marginBottom: 'var(--space-4)' }}>
+                  <button
+                    onClick={() => downloadCSV()}
+                    className="btn btn-primary"
+                    style={{ fontSize: 'var(--fs-md)', padding: 'var(--space-3) var(--space-6)' }}
+                  >
+                    Download data (CSV)
+                  </button>
+                  <p className="help" style={{ marginTop: 'var(--space-2)' }}>
+                    Export your trial responses for personal records
+                  </p>
                 </div>
               </div>
-              
-              <div style={{ margin: '20px 0' }}>
-                <h3>Participant Information</h3>
-                <div style={{ fontSize: '14px', color: '#666' }}>
-                  <p><strong>ID:</strong> {p?.participant_id}</p>
-                  <p><strong>Age:</strong> {p?.age}</p>
-                  <p><strong>Gender:</strong> {p?.gender}</p>
-                  <p><strong>Region:</strong> {(p as any)?.region_ga}</p>
-                  <p><strong>County:</strong> {(p as any)?.county_ga}</p>
-                </div>
-              </div>
-              
-              <div style={{ margin: '20px 0' }}>
-                <button 
-                  onClick={() => downloadCSV()}
-                  style={{
-                    padding: '12px 24px',
-                    backgroundColor: '#059669',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '16px',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  Download Your Data (CSV)
-                </button>
-              </div>
-              
-              <div style={{ marginTop: '20px', padding: '12px', backgroundColor: '#fef3c7', borderRadius: '8px', fontSize: '14px', color: '#92400e' }}>
-                <strong>Research Notice:</strong> {disclaimer}
-              </div>
+
+              <Notice title="Research Use">
+                <p>{disclaimer}</p>
+              </Notice>
             </div>
           );
         })()

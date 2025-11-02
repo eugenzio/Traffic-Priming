@@ -1,0 +1,62 @@
+/* Tour Theme Overrides - Ensure all tour components use CSS variables */
+
+/* Tour container + checklist panel */
+.tour-shell,
+.tour-panel,
+.tour-checklist,
+[data-role="tour-card"],
+.tour-popover,
+.tour-step-card {
+  background: var(--card-bg) !important;
+  color: var(--fg) !important;
+  border: 1px solid var(--card-border) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+.tour-title,
+.tour-panel h3,
+.tour-step-title {
+  color: var(--fg) !important;
+}
+
+.tour-desc,
+.tour-hint,
+.tour-panel .helper {
+  color: var(--fg-subtle) !important;
+}
+
+/* Checklist rows + radios */
+.tour-checklist .row {
+  background: var(--card-bg) !important;
+  color: var(--fg) !important;
+  border: 1px solid var(--card-border) !important;
+}
+
+.tour-checklist .row .radio {
+  border-color: var(--card-border) !important;
+}
+
+.tour-checklist .row .radio:checked,
+.tour-checklist .row[aria-checked="true"] .radio {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+}
+
+/* Popover buttons (Previous/Next/Skip) */
+.tour-btn {
+  background: var(--card-bg) !important;
+  color: var(--fg) !important;
+  border: 1px solid var(--card-border) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.tour-btn:focus-visible {
+  box-shadow: var(--ring) !important;
+}
+
+/* TTC chip / little badges inside the tour demo */
+.tour-chip {
+  background: var(--chip-bg) !important;
+  color: var(--chip-fg) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+}

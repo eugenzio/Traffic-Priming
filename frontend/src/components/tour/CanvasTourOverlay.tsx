@@ -155,12 +155,13 @@ export function CanvasTourOverlay({
         <button
           onClick={() => onChange(Math.max(0, current - 1))}
           disabled={current === 0}
+          className="tour-btn"
           style={{
             padding: '10px 20px',
-            background: current === 0 ? '#f9fafb' : '#ffffff',
-            border: `1px solid ${UI_LIGHT.panelBorder}`,
+            background: current === 0 ? 'var(--input-disabled-bg)' : 'var(--card-bg)',
+            border: '1px solid var(--card-border)',
             borderRadius: '6px',
-            color: current === 0 ? UI_LIGHT.subtext : UI_LIGHT.text,
+            color: current === 0 ? 'var(--fg-subtle)' : 'var(--fg)',
             fontSize: '14px',
             fontWeight: 600,
             cursor: current === 0 ? 'not-allowed' : 'pointer',
@@ -168,12 +169,11 @@ export function CanvasTourOverlay({
           }}
           onFocus={(e) => {
             if (current !== 0) {
-              e.currentTarget.style.outlineColor = UI_LIGHT.focus;
-              e.currentTarget.style.outline = `2px solid ${UI_LIGHT.focus}`;
+              e.currentTarget.style.boxShadow = 'var(--ring)';
             }
           }}
           onBlur={(e) => {
-            e.currentTarget.style.outline = 'none';
+            e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
           }}
         >
           ← Previous
@@ -181,20 +181,20 @@ export function CanvasTourOverlay({
 
         <button
           onClick={onFinish}
+          className="tour-btn"
           style={{
             padding: '10px 20px',
-            background: '#ffffff',
-            border: `1px solid ${UI_LIGHT.panelBorder}`,
+            background: 'var(--card-bg)',
+            border: '1px solid var(--card-border)',
             borderRadius: '6px',
-            color: UI_LIGHT.text,
+            color: 'var(--fg)',
             fontSize: '14px',
             fontWeight: 600,
             cursor: 'pointer',
             outline: 'none'
           }}
           onFocus={(e) => {
-            e.currentTarget.style.outlineColor = UI_LIGHT.focus;
-            e.currentTarget.style.outline = `2px solid ${UI_LIGHT.focus}`;
+            e.currentTarget.style.boxShadow = 'var(--ring)';
           }}
           onBlur={(e) => {
             e.currentTarget.style.outline = 'none';
@@ -206,23 +206,23 @@ export function CanvasTourOverlay({
         {current < steps.length - 1 ? (
           <button
             onClick={() => onChange(current + 1)}
+            className="tour-btn"
             style={{
               padding: '10px 20px',
-              background: '#ffffff',
-              border: `1px solid ${UI_LIGHT.panelBorder}`,
+              background: 'var(--card-bg)',
+              border: '1px solid var(--card-border)',
               borderRadius: '6px',
-              color: UI_LIGHT.text,
+              color: 'var(--fg)',
               fontSize: '14px',
               fontWeight: 600,
               cursor: 'pointer',
               outline: 'none'
             }}
             onFocus={(e) => {
-              e.currentTarget.style.outlineColor = UI_LIGHT.focus;
-              e.currentTarget.style.outline = `2px solid ${UI_LIGHT.focus}`;
+              e.currentTarget.style.boxShadow = 'var(--ring)';
             }}
             onBlur={(e) => {
-              e.currentTarget.style.outline = 'none';
+              e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
             }}
           >
             Next →
@@ -230,23 +230,23 @@ export function CanvasTourOverlay({
         ) : (
           <button
             onClick={onFinish}
+            className="tour-btn tour-chip"
             style={{
               padding: '10px 20px',
-              background: UI_LIGHT.chipBg,
-              border: `1px solid ${UI_LIGHT.chipBg}`,
+              background: 'var(--chip-bg)',
+              border: '1px solid var(--chip-bg)',
               borderRadius: '6px',
-              color: UI_LIGHT.chipFg,
+              color: 'var(--chip-fg)',
               fontSize: '14px',
               fontWeight: 600,
               cursor: 'pointer',
               outline: 'none'
             }}
             onFocus={(e) => {
-              e.currentTarget.style.outlineColor = UI_LIGHT.focus;
-              e.currentTarget.style.outline = `2px solid ${UI_LIGHT.focus}`;
+              e.currentTarget.style.boxShadow = 'var(--ring)';
             }}
             onBlur={(e) => {
-              e.currentTarget.style.outline = 'none';
+              e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
             }}
           >
             Start Survey →

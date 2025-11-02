@@ -6,129 +6,52 @@
 html, body, #root {
   height: 100%;
   margin: 0;
-  font-family: system-ui, sans-serif;
-  background: var(--bg-page);
+  font-family: var(--font-sans);
+  background: var(--bg);
   color: var(--fg);
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
+  from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.app { 
-  max-width: 960px; 
-  margin: 0 auto; 
-  padding: 24px; 
+.app {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-6);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   justify-content: center;
 }
 
-.row { 
-  display: flex; 
-  gap: 12px; 
-  align-items: center; 
-  margin-bottom: 12px;
-}
-
-.card {
-  padding: 24px;
-  margin-bottom: 16px;
-}
-
-.btn {
-  padding: 12px 20px;
-  border-radius: 10px;
-  border: 1px solid var(--fg);
-  background: var(--card-bg);
-  color: var(--fg);
-  cursor: pointer;
-  font-size: 16px;
-  transition: all 0.2s ease;
-}
-
-.btn:hover {
-  background: var(--input-border);
-}
-
-.btn.primary {
-  background: var(--fg);
-  color: var(--card-bg);
-  border-color: var(--fg);
-}
-
-.btn.primary:hover {
-  opacity: 0.9;
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.kbd {
-  border: 1px solid var(--input-border);
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-family: ui-monospace, monospace;
-  background: var(--input-disabled-bg);
-  color: var(--fg);
-  font-size: 14px;
-}
-
-.grid { 
-  display: grid; 
-  gap: 16px; 
-}
-
-/* Note: input and select base styles are in theme.css */
-input, select {
-  width: 100%;
-  font-size: 16px;
-}
-
-label {
+/* Legacy row class - prefer form-row from research-theme.css */
+.row {
   display: flex;
+  gap: var(--space-3);
   align-items: center;
-  gap: 8px;
-  cursor: pointer;
+  margin-bottom: var(--space-3);
 }
 
-label input[type="checkbox"] {
-  width: auto;
-  margin: 0;
+/* Legacy grid class - prefer form-grid from research-theme.css */
+.grid {
+  display: grid;
+  gap: var(--space-4);
 }
 
-h1 {
-  margin: 0 0 16px 0;
-  font-size: 2rem;
-  text-align: center;
-}
-
-h2 {
-  margin: 0 0 16px 0;
-  font-size: 1.5rem;
-  text-align: center;
-}
-
-p {
-  margin: 0 0 16px 0;
-  line-height: 1.6;
-}
-
+/* Prime/stimulus content */
 .prime-content {
   text-align: center;
-  font-size: 1.5rem;
+  font-size: var(--fs-xl);
   font-weight: bold;
-  margin: 40px 0;
+  margin: var(--space-8) 0;
   min-height: 200px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--input-disabled-bg);
-  border-radius: 12px;
+  background: var(--panel);
+  border-radius: var(--radius-md);
   border: 2px dashed var(--card-border);
   color: var(--fg);
 }
@@ -138,57 +61,73 @@ p {
   font-weight: bold;
   color: var(--accent);
   text-align: center;
-  margin: 20px 0;
+  margin: var(--space-6) 0;
 }
 
 .canvas-container {
   display: flex;
   justify-content: center;
-  margin: 20px 0;
+  margin: var(--space-6) 0;
 }
 
 canvas {
-  border: 2px solid var(--card-border);
-  border-radius: 12px;
-  background: var(--input-disabled-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  background: var(--panel);
 }
 
 .instructions {
   text-align: center;
-  margin: 20px 0;
-  font-size: 1.1rem;
-  color: var(--fg);
+  margin: var(--space-6) 0;
+  font-size: var(--fs-lg);
+  color: var(--fg-muted);
 }
 
 .fixation-cross {
   font-size: 4rem;
-  color: var(--fg-muted);
+  color: var(--fg-subtle);
   text-align: center;
-  margin: 40px 0;
+  margin: var(--space-8) 0;
 }
 
+/* Legacy compatibility - prefer new classes */
 .audio-test {
-  margin: 16px 0;
+  margin: var(--space-4) 0;
 }
 
 .consent-text {
-  background: var(--input-disabled-bg);
-  padding: 16px;
-  border-radius: 8px;
-  margin: 16px 0;
-  font-size: 14px;
-  line-height: 1.5;
+  background: var(--panel);
+  padding: var(--space-4);
+  border-radius: var(--radius-sm);
+  margin: var(--space-4) 0;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-relaxed);
+  color: var(--fg-muted);
+  border: 1px solid var(--card-border);
+}
+
+.consent-text h3 {
+  margin-top: 0;
+  margin-bottom: var(--space-3);
   color: var(--fg);
+}
+
+.consent-text p {
+  margin-bottom: var(--space-3);
+}
+
+.consent-text p:last-child {
+  margin-bottom: 0;
 }
 
 .export-section {
   text-align: center;
-  margin: 20px 0;
+  margin: var(--space-6) 0;
 }
 
 .export-btn {
   background: var(--accent);
-  color: var(--card-bg);
+  color: var(--accent-contrast);
   border: none;
 }
 

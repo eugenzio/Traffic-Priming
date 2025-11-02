@@ -7,6 +7,7 @@ import SurveyLayout from './SurveyLayout'
 import CanvasFrame from './CanvasFrame'
 import ProgressBar from './ui/ProgressBar'
 import Badge from './ui/Badge'
+import { SceneLegend, Kbd } from './ResearchUI'
 import { canLeftTurnNow } from '../utils/decision'
 import { downloadCanvasSnapshot } from '../utils/canvasSnapshot'
 
@@ -108,25 +109,30 @@ export default function TrialScreen({
 
   return (
     <SurveyLayout
-      title="Should you turn left now?"
+      title="Turn left?"
+      subtitle={
+        <p className="help" style={{ marginTop: 'var(--space-2)' }}>
+          Indicate your decision for this traffic scene
+        </p>
+      }
       progress={<ProgressBar value={currentTotalIndex} max={totalTrials} />}
       footerLeft={
-        <div className="flex items-center gap-3 text-sm">
-          <kbd className="kbd">←</kbd>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', fontSize: 'var(--fs-sm)' }}>
+          <Kbd>←</Kbd>
           <span>Turn left</span>
-          <span className="text-gray-300">·</span>
-          <kbd className="kbd">Space</kbd>
+          <span style={{ color: 'var(--fg-subtle)' }}>·</span>
+          <Kbd>Space</Kbd>
           <span>Wait</span>
         </div>
       }
       footerRight={
-        <div className="text-xs text-gray-400">
+        <div className="help">
           Trial {currentTotalIndex} of {totalTrials}
         </div>
       }
     >
       {/* Scene info badges */}
-      <div className="flex flex-wrap gap-2 mb-3">
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)', marginBottom: 'var(--space-3)' }}>
         <Badge
           label="Signal"
           value={formatSignal(trial.signal)}
@@ -134,7 +140,7 @@ export default function TrialScreen({
         />
         <Badge
           label="TTC"
-          value={`${trial.oncoming_car_ttc.toFixed(1)}s`}
+          value={`${trial.oncoming_car_ttc.toFixed(1)} s`}
           variant={trial.oncoming_car_ttc < CONFIG.TTC_THRESHOLD_SEC ? 'danger' : 'default'}
         />
         <Badge
@@ -145,28 +151,54 @@ export default function TrialScreen({
       </div>
 
       <CanvasFrame>
-        <div className="w-full">
+        <div style={{ width: '100%' }}>
           <CanvasRenderer trial={trial} anchorX="left" maxRightCropPx={160} />
         </div>
       </CanvasFrame>
 
-      <details className="mt-4 text-sm text-gray-500 cursor-pointer">
-        <summary className="p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+      <details style={{ marginTop: 'var(--space-4)', cursor: 'pointer' }}>
+        <summary
+          className="help"
+          style={{
+            padding: 'var(--space-2)',
+            background: 'var(--panel)',
+            borderRadius: 'var(--radius-sm)',
+            listStylePosition: 'inside'
+          }}
+        >
           Scene details (optional)
         </summary>
-        <div className="mt-2 p-3 bg-gray-50 rounded-lg text-sm text-gray-600 space-y-2">
-          <div><strong>Scene ID:</strong> {trial.scene_id}</div>
-          <div><strong>Signal:</strong> {trial.signal.replace(/_/g, ' ')}</div>
-          <div><strong>Oncoming Car TTC:</strong> {trial.oncoming_car_ttc.toFixed(1)}s</div>
-          <div><strong>Pedestrian:</strong> {trial.pedestrian === 'CROSSING' ? 'Crossing' : 'None'}</div>
+        <div
+          style={{
+            marginTop: 'var(--space-2)',
+            padding: 'var(--space-3)',
+            background: 'var(--panel)',
+            borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--card-border)'
+          }}
+        >
+          <div style={{ display: 'grid', gap: 'var(--space-2)', fontSize: 'var(--fs-sm)' }}>
+            <div><strong>Scene ID:</strong> {trial.scene_id}</div>
+            <div><strong>Signal:</strong> {trial.signal.replace(/_/g, ' ')}</div>
+            <div><strong>Oncoming vehicle TTC:</strong> {trial.oncoming_car_ttc.toFixed(1)} s</div>
+            <div><strong>Pedestrian:</strong> {trial.pedestrian === 'CROSSING' ? 'Crossing' : 'None'}</div>
+          </div>
           <button
             onClick={handleDownloadSnapshot}
-            className="mt-2 w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+            className="btn"
+            style={{
+              marginTop: 'var(--space-3)',
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 'var(--space-2)'
+            }}
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg style={{ width: '16px', height: '16px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            Download Snapshot (PNG)
+            Download snapshot (PNG)
           </button>
         </div>
       </details>

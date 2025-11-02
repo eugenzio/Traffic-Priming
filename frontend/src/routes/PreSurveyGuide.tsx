@@ -3,7 +3,6 @@ import CanvasRenderer, { computeTourAnchors } from '../components/CanvasRenderer
 import { CanvasTourOverlay } from '../components/tour/CanvasTourOverlay';
 import { StepList, type TourStep } from '../components/tour/StepList';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import { UI_LIGHT } from '../styles/uiTheme';
 import ThemeToggle from '../components/ThemeToggle';
 import type { Trial } from '../types';
 
@@ -145,41 +144,44 @@ export default function PreSurveyGuide({ onBack, onContinue }: PreSurveyGuidePro
 
   return (
     <div
+      className="page tour-shell"
       style={{
-        background: UI_LIGHT.pageBg,
-        color: UI_LIGHT.text,
+        background: 'var(--bg)',
+        color: 'var(--fg)',
         minHeight: '100vh',
-        padding: '32px 24px'
+        padding: 'var(--space-8) var(--space-6)'
       }}
     >
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         {/* Header */}
-        <div style={{ marginBottom: '32px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+        <div style={{ marginBottom: 'var(--space-8)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-4)' }}>
             <h1
               id="tour-title"
               style={{
                 margin: 0,
-                fontSize: '32px',
+                fontFamily: 'var(--font-serif)',
+                fontSize: 'var(--fs-3xl)',
                 fontWeight: 700,
-                color: UI_LIGHT.text
+                color: 'var(--fg)',
+                letterSpacing: '-0.01em'
               }}
             >
-              How this interface works
+              Interface Tour
             </h1>
             <ThemeToggle />
           </div>
           <p
             style={{
-              margin: '0 auto',
-              fontSize: '16px',
-              color: UI_LIGHT.subtext,
-              maxWidth: '600px',
-              lineHeight: '1.6'
+              margin: 0,
+              fontSize: 'var(--fs-md)',
+              color: 'var(--fg-muted)',
+              maxWidth: '720px',
+              lineHeight: 'var(--lh-relaxed)'
             }}
           >
-            Take a quick tour to understand the traffic scene components you'll encounter in this
-            study. Use the arrows to navigate, or click any item in the checklist to jump directly.
+            Review the traffic scene components you will encounter in this study. Navigate using the
+            arrows below, or click any item in the checklist to jump directly to that component.
           </p>
         </div>
 
@@ -188,21 +190,21 @@ export default function PreSurveyGuide({ onBack, onContinue }: PreSurveyGuidePro
           style={{
             display: 'grid',
             gridTemplateColumns: window.innerWidth >= 1024 ? '1fr 320px' : '1fr',
-            gap: '24px',
-            marginBottom: '24px'
+            gap: 'var(--space-6)',
+            marginBottom: 'var(--space-6)'
           }}
         >
           {/* Canvas container */}
           <div>
             <div
               ref={containerRef}
+              className="card"
               style={{
                 position: 'relative',
                 width: '100%',
                 height: '450px',
-                background: '#1f2937',
-                borderRadius: '12px',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                padding: 0
               }}
             >
               <CanvasRenderer
@@ -219,6 +221,9 @@ export default function PreSurveyGuide({ onBack, onContinue }: PreSurveyGuidePro
                 bounds={{ x: 0, y: 0, w: canvasSize.width, h: canvasSize.height }}
               />
             </div>
+            <div className="help" style={{ marginTop: 'var(--space-3)', textAlign: 'center' }}>
+              Use arrow keys or click checklist items to navigate
+            </div>
           </div>
 
           {/* Step list (desktop) */}
@@ -231,7 +236,7 @@ export default function PreSurveyGuide({ onBack, onContinue }: PreSurveyGuidePro
 
         {/* Step list (mobile/tablet) */}
         {window.innerWidth < 1024 && (
-          <div style={{ marginBottom: '24px' }}>
+          <div style={{ marginBottom: 'var(--space-6)' }}>
             <StepList steps={tourSteps} current={currentStep} onChange={setCurrentStep} />
           </div>
         )}
@@ -242,61 +247,33 @@ export default function PreSurveyGuide({ onBack, onContinue }: PreSurveyGuidePro
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            padding: '20px',
-            background: UI_LIGHT.pageBg,
-            borderTop: `1px solid ${UI_LIGHT.divider}`,
-            borderRadius: '8px'
+            padding: 'var(--space-4)',
+            background: 'var(--panel)',
+            borderTop: '1px solid var(--card-border)',
+            borderRadius: 'var(--radius-sm)'
           }}
         >
           <button
             onClick={onBack}
-            style={{
-              padding: '12px 24px',
-              background: UI_LIGHT.pageBg,
-              border: `1px solid ${UI_LIGHT.panelBorder}`,
-              borderRadius: '6px',
-              color: UI_LIGHT.text,
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer'
-            }}
+            className="btn btn-ghost"
           >
             ← Back
           </button>
 
-          <label
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '14px',
-              color: UI_LIGHT.subtext,
-              cursor: 'pointer'
-            }}
-          >
+          <label className="checkbox-label">
             <input
               type="checkbox"
               checked={hasSeenTour}
               onChange={(e) => setHasSeenTour(e.target.checked)}
-              style={{ cursor: 'pointer' }}
             />
-            Don't show this guide again
+            Don't show guide again
           </label>
 
           <button
             onClick={handleSkip}
-            style={{
-              padding: '12px 24px',
-              background: UI_LIGHT.chipBg,
-              border: `1px solid ${UI_LIGHT.chipBg}`,
-              borderRadius: '6px',
-              color: UI_LIGHT.chipFg,
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer'
-            }}
+            className="btn btn-primary"
           >
-            Start Survey →
+            Start survey →
           </button>
         </div>
       </div>
