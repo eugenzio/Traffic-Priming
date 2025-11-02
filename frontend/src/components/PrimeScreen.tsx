@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import { CONFIG, PRIME_COPY } from '../config'
 import type { PrimeType } from '../types'
 import { getVisualPrimeCopy } from '../utils/primeCopy'
+import { pageVariants, pageVariantsReduced } from '../motion/tokens'
 
 // Hide the "Visual Prime" eyebrow and tighten title spacing (no new CSS file)
 function ensurePrimeEyebrowHidden() {
@@ -25,6 +27,7 @@ export default function PrimeScreen({
   durationSec?: number
   onDone: () => void
 }) {
+  const prefersReducedMotion = useReducedMotion()
   const [t, setT] = useState(durationSec)
 
   // Hide eyebrow on mount
@@ -64,8 +67,12 @@ export default function PrimeScreen({
   const copy = getPrimeCopy(primeType);
 
   return (
-    <div
+    <motion.div
       className="card"
+      variants={prefersReducedMotion ? pageVariantsReduced : pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
       style={{
         padding: 24,
         minHeight: 300,
@@ -91,6 +98,6 @@ export default function PrimeScreen({
           Showing for <strong>{t}s</strong>
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }

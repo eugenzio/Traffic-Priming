@@ -1,8 +1,19 @@
 import React from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useTheme } from '../context/ThemeProvider';
 
 export default function ThemeToggle() {
   const { theme, toggle } = useTheme();
+  const prefersReducedMotion = useReducedMotion();
+
+  const iconVariants = {
+    initial: { rotate: 0, scale: 1 },
+    animate: {
+      rotate: prefersReducedMotion ? 0 : 180,
+      scale: prefersReducedMotion ? 1 : [1, 0.95, 1],
+      transition: { duration: 0.3, ease: [0.33, 1, 0.68, 1] }
+    }
+  };
 
   return (
     <button
@@ -17,9 +28,17 @@ export default function ThemeToggle() {
         boxShadow: 'var(--shadow-sm)',
       }}
     >
-      <span role="img" aria-hidden="true">
+      <motion.span
+        key={theme}
+        role="img"
+        aria-hidden="true"
+        variants={iconVariants}
+        initial="initial"
+        animate="animate"
+        style={{ display: 'inline-block' }}
+      >
         {theme === 'light' ? '☀️' : '🌙'}
-      </span>
+      </motion.span>
       <span>{theme === 'light' ? 'Light' : 'Dark'}</span>
     </button>
   );

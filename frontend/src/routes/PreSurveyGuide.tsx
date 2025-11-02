@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import CanvasRenderer, { computeTourAnchors } from '../components/CanvasRenderer';
 import { CanvasTourOverlay } from '../components/tour/CanvasTourOverlay';
 import { StepList, type TourStep } from '../components/tour/StepList';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import ThemeToggle from '../components/ThemeToggle';
 import type { Trial } from '../types';
+import { pageVariants, pageVariantsReduced } from '../motion/tokens';
 
 const TOUR_VERSION = 'v1';
 const TOUR_STORAGE_KEY = `tp.hasSeenTour.${TOUR_VERSION}`;
@@ -105,6 +107,7 @@ interface PreSurveyGuideProps {
 }
 
 export default function PreSurveyGuide({ onBack, onContinue }: PreSurveyGuideProps) {
+  const prefersReducedMotion = useReducedMotion();
   const [hasSeenTour, setHasSeenTour] = useLocalStorage(TOUR_STORAGE_KEY, false);
   const [currentStep, setCurrentStep] = useState(0);
   const [canvasSize, setCanvasSize] = useState({ width: 600, height: 450 });
@@ -143,8 +146,12 @@ export default function PreSurveyGuide({ onBack, onContinue }: PreSurveyGuidePro
   };
 
   return (
-    <div
+    <motion.main
       className="page tour-shell"
+      variants={prefersReducedMotion ? pageVariantsReduced : pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
       style={{
         background: 'var(--bg)',
         color: 'var(--fg)',
@@ -277,6 +284,6 @@ export default function PreSurveyGuide({ onBack, onContinue }: PreSurveyGuidePro
           </button>
         </div>
       </div>
-    </div>
+    </motion.main>
   );
 }

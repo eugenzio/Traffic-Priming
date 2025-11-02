@@ -4,6 +4,22 @@
  * Light mode default, dark mode via html[data-theme="dark"]
  */
 
+/* Smooth theme transitions */
+:root,
+[data-theme="light"],
+[data-theme="dark"] {
+  transition: background-color 200ms linear, color 200ms linear, border-color 200ms linear, fill 200ms linear;
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  :root,
+  [data-theme="light"],
+  [data-theme="dark"] {
+    transition: none;
+  }
+}
+
 :root {
   /* Typography */
   --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Arial, "Apple Color Emoji", "Segoe UI Emoji";

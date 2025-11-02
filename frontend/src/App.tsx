@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import StartScreen from './components/StartScreen'
 import PreSurveyGuide from './routes/PreSurveyGuide'
 import PrimeScreen from './components/PrimeScreen'
@@ -8,6 +9,7 @@ import ThemeToggle from './components/ThemeToggle'
 import { SectionHeader, SummaryTable, ExportButtons, Notice } from './components/ResearchUI'
 import { useExperiment } from './context/ExperimentProvider'
 import type { TrialBlock } from './types'
+import { pageVariants, pageVariantsReduced, fadeUpVariants, fadeUpVariantsReduced, staggerContainer } from './motion/tokens'
 
 // Helper functions
 function buildSequence(blocks: TrialBlock[]): number[] {
@@ -45,6 +47,7 @@ type Phase = 'start' | 'guide' | 'prime' | 'trial' | 'done'
 
 export default function App() {
   const { blocks } = useExperiment()
+  const prefersReducedMotion = useReducedMotion()
   const [phase, setPhase] = useState<Phase>('start')
   const [bi, setBi] = useState(0) // index in 'sequence'
   const [ti, setTi] = useState(0) // trial index in current block
@@ -81,51 +84,56 @@ export default function App() {
 
   return (
     <div className="app">
-      {/* Start: Collect participant info, then show guide */}
-      {phase === 'start' && (
-        <StartScreen
-          onBegin={() => setPhase('guide')}
-        />
-      )}
+      <AnimatePresence mode="wait">
+        {/* Start: Collect participant info, then show guide */}
+        {phase === 'start' && (
+          <StartScreen
+            key="start"
+            onBegin={() => setPhase('guide')}
+          />
+        )}
 
-      {/* Guide: Interactive tour of the canvas interface */}
-      {phase === 'guide' && (
-        <PreSurveyGuide
-          onBack={() => setPhase('start')}
-          onContinue={() => {
-            setBi(0);
-            setTi(0);
-            setPhase(phaseForBlock(blocks[sequence[0]]));
-          }}
-        />
-      )}
+        {/* Guide: Interactive tour of the canvas interface */}
+        {phase === 'guide' && (
+          <PreSurveyGuide
+            key="guide"
+            onBack={() => setPhase('start')}
+            onContinue={() => {
+              setBi(0);
+              setTi(0);
+              setPhase(phaseForBlock(blocks[sequence[0]]));
+            }}
+          />
+        )}
 
-      {phase === 'prime' && (
-        <PrimeScreen
-          primeType={curBlock?.prime_type}
-          durationSec={6}
-          onDone={onPrimeDone}
-        />
-      )}
+        {phase === 'prime' && (
+          <PrimeScreen
+            key="prime"
+            primeType={curBlock?.prime_type}
+            durationSec={6}
+            onDone={onPrimeDone}
+          />
+        )}
 
-      {phase === 'trial' && (
-        (() => {
-          const prog = computeProgress(sequence, blocks, bi, ti);
-          return (
-            <TrialScreen
-              block={curBlock}
-              trial={curTrial}
-              blockIdx={sequence[bi]}  // keep original block index for logs
-              trialIdx={ti}
-              onNext={onTrialComplete}
-              uiBlockNumber={prog.uiBlockNumber}
-              currentTotalIndex={prog.currentIndex}
-              totalTrials={prog.total}
-              progressPercent={prog.percent}
-            />
-          );
-        })()
-      )}
+        {phase === 'trial' && (
+          (() => {
+            const prog = computeProgress(sequence, blocks, bi, ti);
+            return (
+              <TrialScreen
+                key={`trial-${bi}-${ti}`}
+                block={curBlock}
+                trial={curTrial}
+                blockIdx={sequence[bi]}  // keep original block index for logs
+                trialIdx={ti}
+                onNext={onTrialComplete}
+                uiBlockNumber={prog.uiBlockNumber}
+                currentTotalIndex={prog.currentIndex}
+                totalTrials={prog.total}
+                progressPercent={prog.percent}
+              />
+            );
+          })()
+        )}
 
       {phase === 'done' && (
         (() => {
@@ -134,21 +142,41 @@ export default function App() {
           const p = getParticipantSnapshot();
           const disclaimer = getResearchDisclaimer();
 
+          const containerVariants = prefersReducedMotion ? {} : staggerContainer;
+          const itemVariants = prefersReducedMotion ? fadeUpVariantsReduced : fadeUpVariants;
+
           return (
-            <div className="page">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-6)' }}>
+            <motion.main
+              key="done"
+              className="page"
+              variants={prefersReducedMotion ? pageVariantsReduced : pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+            >
+              <motion.div
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-6)' }}
+                variants={itemVariants}
+                initial="initial"
+                animate="animate"
+              >
                 <h1 style={{ margin: 0 }}>Study Complete</h1>
                 <ThemeToggle />
-              </div>
+              </motion.div>
 
-              <div className="section">
+              <motion.div
+                variants={containerVariants}
+                initial="initial"
+                animate="animate"
+              >
+              <motion.div className="section" variants={itemVariants}>
                 <p>
                   Thank you for participating in this research study. You completed {total} trials examining
                   left-turn decision-making under various traffic conditions.
                 </p>
-              </div>
+              </motion.div>
 
-              <div className="section">
+              <motion.div className="section" variants={itemVariants}>
                 <SectionHeader title="Response Summary" />
                 <div className="card">
                   <div className="card-body">
@@ -177,9 +205,9 @@ export default function App() {
                     </p>
                   </div>
                 </div>
-              </div>
+              </motion.div>
 
-              <div className="section">
+              <motion.div className="section" variants={itemVariants}>
                 <SectionHeader title="Participant Information" />
                 <div className="card">
                   <div className="card-body">
@@ -194,9 +222,9 @@ export default function App() {
                     />
                   </div>
                 </div>
-              </div>
+              </motion.div>
 
-              <div className="section">
+              <motion.div className="section" variants={itemVariants}>
                 <SectionHeader title="Export Data" />
                 <div style={{ textAlign: 'center', marginBottom: 'var(--space-4)' }}>
                   <button
@@ -210,15 +238,19 @@ export default function App() {
                     Export your trial responses for personal records
                   </p>
                 </div>
-              </div>
+              </motion.div>
 
-              <Notice title="Research Use">
-                <p>{disclaimer}</p>
-              </Notice>
-            </div>
+              <motion.div variants={itemVariants}>
+                <Notice title="Research Use">
+                  <p>{disclaimer}</p>
+                </Notice>
+              </motion.div>
+              </motion.div>
+            </motion.main>
           );
         })()
       )}
+      </AnimatePresence>
     </div>
   )
 }

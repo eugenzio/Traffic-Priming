@@ -1,5 +1,7 @@
 import React from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import ThemeToggle from './ThemeToggle';
+import { pageVariants, pageVariantsReduced } from '../motion/tokens';
 
 export default function SurveyLayout({
   title,
@@ -16,8 +18,17 @@ export default function SurveyLayout({
   footerLeft?: React.ReactNode;
   footerRight?: React.ReactNode;
 }) {
+  const prefersReducedMotion = useReducedMotion();
+
   return (
-    <div className="min-h-screen" style={{ background: 'var(--bg-page)', color: 'var(--fg)' }}>
+    <motion.div
+      className="min-h-screen"
+      variants={prefersReducedMotion ? pageVariantsReduced : pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      style={{ background: 'var(--bg-page)', color: 'var(--fg)' }}
+    >
       <div className="mx-auto max-w-[1100px] px-4 sm:px-6 lg:px-8 py-8 md:py-10">
         <header className="mb-6 md:mb-8">
           <div className="flex items-start justify-between gap-4 mb-3">
@@ -37,6 +48,6 @@ export default function SurveyLayout({
           <div>{footerRight}</div>
         </footer>
       </div>
-    </div>
+    </motion.div>
   );
 }

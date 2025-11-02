@@ -1,9 +1,11 @@
 import React, { useState } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import { useExperiment } from '../context/ExperimentProvider'
 import type { Participant, CountyGA } from '../types'
 import { unlockAudio } from '../utils/audio'
 import ThemeToggle from './ThemeToggle'
 import { SectionHeader, FieldGroup, Kbd, Notice } from './ResearchUI'
+import { pageVariants, pageVariantsReduced, fadeUpVariants, fadeUpVariantsReduced, staggerContainer } from '../motion/tokens'
 
 // county groups + Outside of GA
 const COUNTY_GROUPS = {
@@ -16,6 +18,7 @@ const COUNTY_GROUPS = {
 
 export default function StartScreen({ onBegin }: { onBegin: () => void }) {
   const { setParticipant } = useExperiment()
+  const prefersReducedMotion = useReducedMotion()
   const [consent, setConsent] = useState(false)
   const [audioTested, setAudioTested] = useState(false)
   const [participantData, setParticipantData] = useState({
@@ -111,23 +114,42 @@ export default function StartScreen({ onBegin }: { onBegin: () => void }) {
     }
   }
 
+  const containerVariants = prefersReducedMotion ? {} : staggerContainer;
+  const itemVariants = prefersReducedMotion ? fadeUpVariantsReduced : fadeUpVariants;
+
   return (
-    <div className="page">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-6)' }}>
+    <motion.main
+      className="page"
+      variants={prefersReducedMotion ? pageVariantsReduced : pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+    >
+      <motion.div
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-6)' }}
+        variants={itemVariants}
+        initial="initial"
+        animate="animate"
+      >
         <h1 style={{ margin: 0 }}>Left-Turn Decision Study</h1>
         <ThemeToggle />
-      </div>
+      </motion.div>
 
-      <div className="section">
+      <motion.div
+        variants={containerVariants}
+        initial="initial"
+        animate="animate"
+      >
+        <motion.div className="section" variants={itemVariants}>
         <SectionHeader index={1} title="Study Overview" />
         <p>
           This study examines left-turn decisions under controlled traffic scenes. Each trial presents
           a single intersection with a specified signal state, an oncoming vehicle with a labeled
           time-to-collision (TTC), and, in some trials, a pedestrian crossing.
         </p>
-      </div>
+      </motion.div>
 
-      <div className="section">
+      <motion.div className="section" variants={itemVariants}>
         <SectionHeader index={2} title="Instructions" />
         <p>
           Indicate "Turn Left" with the <Kbd>←</Kbd> key and "Do Not Turn" with the <Kbd>Space</Kbd> bar.
@@ -136,17 +158,17 @@ export default function StartScreen({ onBegin }: { onBegin: () => void }) {
         <Notice title="Duration">
           <p>The study takes approximately 3–5 minutes to complete.</p>
         </Notice>
-      </div>
+      </motion.div>
 
-      <div className="section">
+      <motion.div className="section" variants={itemVariants}>
         <SectionHeader index={3} title="Privacy" />
         <p>
           Responses are anonymous and stored without direct identifiers. Aggregate results may be
           reported in academic venues.
         </p>
-      </div>
+      </motion.div>
 
-      <div className="section">
+      <motion.div className="section" variants={itemVariants}>
         <SectionHeader index={4} title="Participant Information" />
         <div className="card">
           <div className="card-body">
@@ -293,7 +315,8 @@ export default function StartScreen({ onBegin }: { onBegin: () => void }) {
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+      </motion.div>
+    </motion.main>
   )
 }
