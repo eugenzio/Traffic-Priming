@@ -1199,6 +1199,19 @@ export default function CanvasRenderer({
     if (trial.pedestrian === 'CROSSING') {
       const crosswalkId = getPedestrianCrosswalkId(trial)
       const pedestrianState = calculatePedestrianPosition(layout, true, crosswalkId)
+
+      // Debug logging
+      console.info('[PEDESTRIAN]', {
+        crosswalkId,
+        position: { x: pedestrianState.x, y: pedestrianState.y },
+        canvasHeight: canvasSize.height,
+        trial_data: {
+          pedestrian_crosswalk: trial.pedestrian_crosswalk,
+          pedestrian_side: trial.pedestrian_side,
+          pedestrian_direction: trial.pedestrian_direction
+        }
+      });
+
       drawLayer_Pedestrians(ctx, layout, [pedestrianState], colors)
     }
     
