@@ -395,6 +395,26 @@ function getPositionAlongLane(lane: LaneGeometry, distance: number): { x: number
 
 // === PEDESTRIAN POSITIONING SYSTEM ===
 
+// --- Stable hash (tiny, fast) for deterministic fallback ---
+function djb2Hash(str: string): number {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) + h) + str.charCodeAt(i);
+  return h | 0;
+}
+
+// Decide 'north' or 'south' deterministically for a trial without explicit crosswalk.
+// Uses id/index/ttc/signal to keep the split stable between runs.
+function pickNorthOrSouthDeterministically(trial: Trial): 'north' | 'south' {
+  // Use whatever stable identifiers exist in your Trial type; fall back safely.
+  const seed = JSON.stringify({
+    id: trial.scene_id ?? 0,
+    ttc: Math.round((trial.oncoming_car_ttc ?? 0) * 10),
+    sig: trial.signal ?? 'GREEN',
+  });
+  const h = Math.abs(djb2Hash(seed));
+  return (h % 2 === 0) ? 'north' : 'south';
+}
+
 /**
  * Calculate pedestrian position based on crossing state.
  * Restricted to north/south crosswalks only with horizontal movement.
@@ -442,19 +462,18 @@ function getPedestrianCrosswalkId(trial: Trial): 'north' | 'south' {
   }
 
   // 2) Back-compat mappings
-  // - 'right' or 'east'  -> far side (non-blocking) -> map to 'north'
-  // - 'left'  or 'west'  -> near/into path (blocking) -> map to 'south'
-  if (trial.pedestrian_side === 'right') return 'north';
+  // For our WEST->SOUTH left turn, near side = 'south', far side = 'north'
   if (trial.pedestrian_side === 'left') return 'south';
+  if (trial.pedestrian_side === 'right') return 'north';
 
-  if (trial.pedestrian_direction === 'east') return 'north';
   if (trial.pedestrian_direction === 'west') return 'south';
+  if (trial.pedestrian_direction === 'east') return 'north';
   if (trial.pedestrian_direction === 'south' || trial.pedestrian_direction === 'north') {
     return trial.pedestrian_direction;
   }
 
-  // 3) Default to far side (non-blocking)
-  return 'north';
+  // 3) Deterministic fallback so we actually see both sides in practice
+  return pickNorthOrSouthDeterministically(trial);
 }
 
 // === LAYER-BASED DRAWING FUNCTIONS ===
@@ -789,7 +808,11 @@ function drawLayer_Pedestrians(ctx: CanvasRenderingContext2D, layout: Intersecti
       ctx.fillStyle = warningColor;
       ctx.font = 'bold 12px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText('CROSSING', x, y + 38);
+
+      // Prevent label from falling below the canvas bottom
+      const bottomSafeY = layout.bounds.y + layout.bounds.h - 6; // 6px padding
+      const labelY = Math.min(bottomSafeY, y + 38);
+      ctx.fillText('CROSSING', x, labelY);
     }
   });
 }
