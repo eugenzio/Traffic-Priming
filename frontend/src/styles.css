@@ -1,13 +1,22 @@
 /* reset-ish */
-* { 
-  box-sizing: border-box; 
+* {
+  box-sizing: border-box;
 }
 
-html, body, #root { 
-  height: 100%; 
-  margin: 0; 
-  font-family: system-ui, sans-serif; 
-  background-color: #f8fafc;
+:root {
+  --page-bg: #ffffff;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: var(--page-bg);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .app { 
