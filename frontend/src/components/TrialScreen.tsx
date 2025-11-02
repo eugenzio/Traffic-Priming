@@ -6,10 +6,24 @@ import CanvasRenderer from './CanvasRenderer'
 import SurveyLayout from './SurveyLayout'
 import CanvasFrame from './CanvasFrame'
 import ProgressBar from './ui/ProgressBar'
+import Badge from './ui/Badge'
 import { canLeftTurnNow } from '../utils/decision'
 
 // Safe bounds type for CanvasRenderer
 type Bounds = { x: number; y: number; w: number; h: number };
+
+// Helper to get signal badge variant
+function getSignalVariant(signal: string): 'success' | 'warning' | 'danger' | 'default' {
+  if (signal === 'GREEN_ARROW') return 'success';
+  if (signal === 'YELLOW_FLASH') return 'warning';
+  if (signal === 'RED' || signal === 'NO_LEFT_TURN') return 'danger';
+  return 'default';
+}
+
+// Helper to format signal display
+function formatSignal(signal: string): string {
+  return signal.replace(/_/g, ' ');
+}
 
 export default function TrialScreen({
   block,
@@ -113,6 +127,25 @@ export default function TrialScreen({
       }
       footerRight={null}
     >
+      {/* Scene info badges */}
+      <div className="flex flex-wrap gap-2 mb-3">
+        <Badge
+          label="Signal"
+          value={formatSignal(trial.signal)}
+          variant={getSignalVariant(trial.signal)}
+        />
+        <Badge
+          label="TTC"
+          value={`${trial.oncoming_car_ttc.toFixed(1)}s`}
+          variant={trial.oncoming_car_ttc < CONFIG.TTC_THRESHOLD_SEC ? 'danger' : 'default'}
+        />
+        <Badge
+          label="Pedestrian"
+          value={trial.pedestrian === 'CROSSING' ? 'Crossing' : 'None'}
+          variant={trial.pedestrian === 'CROSSING' ? 'warning' : 'default'}
+        />
+      </div>
+
       <CanvasFrame>
         <div className="w-full">
           <CanvasRenderer trial={trial} anchorX="left" maxRightCropPx={160} />
