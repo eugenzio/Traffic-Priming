@@ -103,9 +103,8 @@ interface CanvasRendererProps {
 }
 
 // === CAR IMAGE ORIENTATION ===
-// The white sedan PNG faces UP (North) at rest.
-// Use +π/2 as the base heading in math coordinates (CCW+).
-const CAR_IMAGE_ORIENTATION = Math.PI / 2;
+// The white sedan PNG faces EAST (right) at rest.
+const CAR_IMAGE_ORIENTATION = 0;
 
 // === EDGE BLEED ===
 const EDGE_BLEED = 2; // px – draw roads past the canvas edge
@@ -697,13 +696,13 @@ function drawLayer_Vehicles(
 
       ctx.drawImage(carImage, -drawW / 2, -drawH / 2, drawW, drawH);
     } else {
-      // fallback 렌더 (앞쪽 표식: 왼쪽이 전방)
+      // fallback render — base faces EAST at 0 rad (front marker to the RIGHT)
       ctx.fillStyle = carColor;
       ctx.fillRect(-W / 2, -L / 2, W, L);
       ctx.fillStyle = 'rgba(135,206,235,0.4)';
       ctx.fillRect(-W / 2 + 3, -L / 2 + 3, W - 6, L - 6);
       ctx.fillStyle = '#fff';
-      ctx.fillRect(-W / 2 - 5, -3, 5, 6); // front marker
+      ctx.fillRect(W / 2, -3, 5, 6); // front marker
       ctx.fillStyle = '#1a1a1a';
       const r = 4, offX = W / 2 - 6, offY = L / 2 - 6;
       ctx.beginPath(); ctx.arc(-offX, -offY, r, 0, 2*Math.PI); ctx.fill();
