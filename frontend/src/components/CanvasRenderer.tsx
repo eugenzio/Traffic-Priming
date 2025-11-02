@@ -104,7 +104,8 @@ interface CanvasRendererProps {
 
 // === CAR IMAGE ORIENTATION ===
 // The white sedan PNG faces UP (North) at rest.
-const CAR_IMAGE_ORIENTATION = -Math.PI / 2;
+// Use +π/2 as the base heading in math coordinates (CCW+).
+const CAR_IMAGE_ORIENTATION = Math.PI / 2;
 
 // === EDGE BLEED ===
 const EDGE_BLEED = 2; // px – draw roads past the canvas edge
@@ -113,6 +114,13 @@ function normalizeAngle(a: number) {
   while (a <= -Math.PI) a += Math.PI * 2;
   while (a >  Math.PI) a -= Math.PI * 2;
   return a;
+}
+
+// Convert a math heading (CCW+) to the Canvas 2D rotation (CW+).
+// Canvas 2D uses clockwise-positive rotation, but our "angle" is in math coords (CCW positive).
+// To convert: canvas_rotation = -(targetAngle - spriteBase)
+function canvasRotationFromHeading(targetAngle: number, spriteBase: number) {
+  return -normalizeAngle(targetAngle - spriteBase);
 }
 
 // === INTERSECTION CONFIGURATION ===
@@ -661,18 +669,19 @@ function drawLayer_Vehicles(
     ctx.save();
     ctx.translate(x, y);
 
-    const rotationAngle = normalizeAngle(angle - CAR_IMAGE_ORIENTATION);
+    const rotationAngle = canvasRotationFromHeading(angle, CAR_IMAGE_ORIENTATION);
 
-    // Debug logging to verify rotation
+    // Debug logging to verify rotation (report canvas rotation)
     if (process.env.NODE_ENV !== 'production') {
       console.info('[CAR ROT]', {
-        angle,
-        CAR_IMAGE_ORIENTATION,
-        rot_deg: (rotationAngle * 180 / Math.PI).toFixed(1)
+        heading_rad: angle,
+        sprite_base_rad: CAR_IMAGE_ORIENTATION,
+        canvas_rot_rad: rotationAngle,
+        canvas_rot_deg: (rotationAngle * 180 / Math.PI).toFixed(1)
       });
     }
 
-    ctx.rotate(rotationAngle); // Use (target angle - source angle)
+    ctx.rotate(rotationAngle);
 
     if (carImage) {
       ctx.imageSmoothingEnabled = true;
