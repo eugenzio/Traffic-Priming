@@ -8,6 +8,7 @@ import CanvasFrame from './CanvasFrame'
 import ProgressBar from './ui/ProgressBar'
 import Badge from './ui/Badge'
 import { canLeftTurnNow } from '../utils/decision'
+import { downloadCanvasSnapshot } from '../utils/canvasSnapshot'
 
 // Safe bounds type for CanvasRenderer
 type Bounds = { x: number; y: number; w: number; h: number };
@@ -48,14 +49,15 @@ export default function TrialScreen({
 }) {
   const { submitLog, participant, pushLocalLog } = useExperiment()
   const rtStart = useRef<number | null>(null)
-  const [showHint, setShowHint] = useState(true)
 
-  // Auto-hide hint after 3 seconds per block
-  useEffect(() => {
-    setShowHint(true)
-    const id = setTimeout(() => setShowHint(false), 3000)
-    return () => clearTimeout(id)
-  }, [blockIdx])
+  // Handler to download canvas snapshot
+  const handleDownloadSnapshot = () => {
+    const canvas = document.querySelector('canvas')
+    if (canvas) {
+      const filename = `scene-${trial.scene_id}-${Date.now()}.png`
+      downloadCanvasSnapshot(canvas, filename)
+    }
+  }
 
   // Initialize RT start time
   useEffect(() => {
@@ -109,23 +111,19 @@ export default function TrialScreen({
       title="Should you turn left now?"
       progress={<ProgressBar value={currentTotalIndex} max={totalTrials} />}
       footerLeft={
-        showHint ? (
-          <span
-            onMouseEnter={() => setShowHint(true)}
-            style={{ cursor: 'default' }}
-          >
-            Press ← to turn left · Space to wait
-          </span>
-        ) : (
-          <span
-            onMouseEnter={() => setShowHint(true)}
-            style={{ opacity: 0.4, cursor: 'default' }}
-          >
-            Hover for controls
-          </span>
-        )
+        <div className="flex items-center gap-3 text-sm">
+          <kbd className="kbd">←</kbd>
+          <span>Turn left</span>
+          <span className="text-gray-300">·</span>
+          <kbd className="kbd">Space</kbd>
+          <span>Wait</span>
+        </div>
       }
-      footerRight={null}
+      footerRight={
+        <div className="text-xs text-gray-400">
+          Trial {currentTotalIndex} of {totalTrials}
+        </div>
+      }
     >
       {/* Scene info badges */}
       <div className="flex flex-wrap gap-2 mb-3">
@@ -156,10 +154,20 @@ export default function TrialScreen({
         <summary className="p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
           Scene details (optional)
         </summary>
-        <div className="mt-2 p-3 bg-gray-50 rounded-lg text-sm text-gray-600 space-y-1">
+        <div className="mt-2 p-3 bg-gray-50 rounded-lg text-sm text-gray-600 space-y-2">
+          <div><strong>Scene ID:</strong> {trial.scene_id}</div>
           <div><strong>Signal:</strong> {trial.signal.replace(/_/g, ' ')}</div>
           <div><strong>Oncoming Car TTC:</strong> {trial.oncoming_car_ttc.toFixed(1)}s</div>
           <div><strong>Pedestrian:</strong> {trial.pedestrian === 'CROSSING' ? 'Crossing' : 'None'}</div>
+          <button
+            onClick={handleDownloadSnapshot}
+            className="mt-2 w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Download Snapshot (PNG)
+          </button>
         </div>
       </details>
     </SurveyLayout>
