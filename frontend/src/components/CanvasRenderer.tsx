@@ -660,7 +660,19 @@ function drawLayer_Vehicles(
 
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate(normalizeAngle(angle - CAR_IMAGE_ORIENTATION)); // Use (target angle - source angle)
+
+    const rotationAngle = normalizeAngle(angle - CAR_IMAGE_ORIENTATION);
+
+    // Debug logging to verify rotation
+    if (process.env.NODE_ENV !== 'production') {
+      console.info('[CAR ROT]', {
+        angle,
+        CAR_IMAGE_ORIENTATION,
+        rot_deg: (rotationAngle * 180 / Math.PI).toFixed(1)
+      });
+    }
+
+    ctx.rotate(rotationAngle); // Use (target angle - source angle)
 
     if (carImage) {
       ctx.imageSmoothingEnabled = true;
