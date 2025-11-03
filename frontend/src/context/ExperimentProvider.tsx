@@ -2,6 +2,7 @@ import React, { createContext, useContext, useMemo, useState, useEffect } from '
 import type { Participant, TrialBlock, LogRow } from '../types'
 import { api } from '../services/api'
 import { submitToDB, flushQueue } from '../lib/telemetry'
+import { augmentTrialsWithPrimeDesign, validatePrimeDesign } from '../design/generator'
 
 interface ExperimentContext {
   participant?: Participant
@@ -28,15 +29,36 @@ export const useExperiment = () => {
   return v
 }
 
-export const ExperimentProvider: React.FC<{ 
-  children: React.ReactNode; 
-  blocks: TrialBlock[] 
-}> = ({ children, blocks }) => {
+export const ExperimentProvider: React.FC<{
+  children: React.ReactNode;
+  blocks: TrialBlock[]
+}> = ({ children, blocks: rawBlocks }) => {
   const [participant, setParticipant] = useState<Participant | undefined>()
   const [logs, setLogs] = useState<Omit<LogRow, 'created_at'>[]>([])
-  
+
   // ADD: local client log buffer + helpers for summary & CSV
   const [clientLogs, setClientLogs] = useState<LogRow[]>([])
+
+  // Augment trials with prime design on mount
+  const blocks = useMemo(() => {
+    const augmentedBlocks = rawBlocks.map(block => ({
+      ...block,
+      trials: augmentTrialsWithPrimeDesign([...block.trials])
+    }));
+
+    // Validate in development
+    if (process.env.NODE_ENV === 'development') {
+      const allTrials = augmentedBlocks.flatMap(b => b.trials);
+      const validation = validatePrimeDesign(allTrials);
+      if (!validation.valid) {
+        console.error('[Prime Design] Validation errors:', validation.errors);
+      } else {
+        console.log('[Prime Design] ✅ Valid');
+      }
+    }
+
+    return augmentedBlocks;
+  }, [rawBlocks]);
 
   // Flush offline queue on mount
   useEffect(() => { flushQueue(); }, [])
@@ -74,7 +96,8 @@ export const ExperimentProvider: React.FC<{
       'participant_id','age','gender','drivers_license','learners_permit',
       'region_ga','county_ga','block_idx','prime_type','trial_idx','scene_id',
       'signal','oncoming_car_ttc','pedestrian','choice','correct','rt_ms',
-      'displayed_at_ms','responded_at_ms','focus_lost','seed','created_at'
+      'displayed_at_ms','responded_at_ms','focus_lost','seed','created_at',
+      'prime_condition','prime_id','prime_block_index','is_primed'
     ];
     const body = rows.map(r =>
       HEADER.map(k => (r as any)[k] ?? '').join(',')

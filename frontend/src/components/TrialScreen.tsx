@@ -10,6 +10,8 @@ import Badge from './ui/Badge'
 import { SceneLegend, Kbd } from './ResearchUI'
 import { canLeftTurnNow } from '../utils/decision'
 import { downloadCanvasSnapshot } from '../utils/canvasSnapshot'
+import ConditionPill from './ConditionPill'
+import { getPrimeForTrial } from '../design/generator'
 
 // Safe bounds type for CanvasRenderer
 type Bounds = { x: number; y: number; w: number; h: number };
@@ -51,6 +53,13 @@ export default function TrialScreen({
   const { submitLog, participant, pushLocalLog } = useExperiment()
   const rtStart = useRef<number | null>(null)
 
+  // Prime state - activate immediately when trial loads
+  const [primeActive, setPrimeActive] = useState(false)
+
+  // Get prime for this trial
+  const prime = getPrimeForTrial(trial)
+  const isPriming = prime.id !== 'control_none'
+
   // Handler to download canvas snapshot
   const handleDownloadSnapshot = () => {
     const canvas = document.querySelector('canvas')
@@ -60,7 +69,17 @@ export default function TrialScreen({
     }
   }
 
-  // Initialize RT start time
+  // Activate prime FX when trial loads
+  useEffect(() => {
+    setPrimeActive(false)
+    // Activate prime after a short delay to ensure canvas is ready
+    const timer = setTimeout(() => {
+      setPrimeActive(true)
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [trial])
+
+  // Initialize RT start time when trial loads
   useEffect(() => {
     rtStart.current = performance.now()
   }, [trial])
@@ -94,7 +113,13 @@ export default function TrialScreen({
         displayed_at_ms: Math.round(rtStart.current!),
         responded_at_ms: Math.round(performance.now()),
         focus_lost: (document.hasFocus() ? 0 : 1) as 0 | 1,
-        seed: 0
+        seed: 0,
+
+        // Prime experiment fields
+        prime_condition: trial.condition_label,
+        prime_id: trial.prime_id,
+        prime_block_index: trial.prime_block_index,
+        is_primed: trial.is_primed
       };
       await submitLog(logRow)
 
@@ -132,31 +157,42 @@ export default function TrialScreen({
       }
     >
       {/* Scene info badges */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)', marginBottom: 'var(--space-3)' }}>
-        <Badge
-          label="Signal"
-          value={formatSignal(trial.signal)}
-          variant={getSignalVariant(trial.signal)}
-        />
-        <Badge
-          label="TTC"
-          value={`${trial.oncoming_car_ttc.toFixed(1)} s`}
-          variant={trial.oncoming_car_ttc < CONFIG.TTC_THRESHOLD_SEC ? 'danger' : 'default'}
-        />
-        <Badge
-          label="Pedestrian"
-          value={trial.pedestrian === 'CROSSING' ? 'Crossing' : 'None'}
-          variant={trial.pedestrian === 'CROSSING' ? 'warning' : 'default'}
-        />
-      </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)', marginBottom: 'var(--space-3)' }}>
+            <Badge
+              label="Signal"
+              value={formatSignal(trial.signal)}
+              variant={getSignalVariant(trial.signal)}
+            />
+            <Badge
+              label="TTC"
+              value={`${trial.oncoming_car_ttc.toFixed(1)} s`}
+              variant={trial.oncoming_car_ttc < CONFIG.TTC_THRESHOLD_SEC ? 'danger' : 'default'}
+            />
+            <Badge
+              label="Pedestrian"
+              value={trial.pedestrian === 'CROSSING' ? 'Crossing' : 'None'}
+              variant={trial.pedestrian === 'CROSSING' ? 'warning' : 'default'}
+            />
+          </div>
 
-      <CanvasFrame>
-        <div style={{ width: '100%' }}>
-          <CanvasRenderer trial={trial} anchorX="left" maxRightCropPx={160} />
-        </div>
-      </CanvasFrame>
+          <CanvasFrame>
+            <div style={{ width: '100%', position: 'relative' }}>
+              {/* Condition HUD pill */}
+              <ConditionPill
+                condition={trial.condition_label || 'No prime'}
+                primeId={trial.prime_id}
+              />
 
-      <details style={{ marginTop: 'var(--space-4)', cursor: 'pointer' }}>
+              <CanvasRenderer
+                trial={trial}
+                anchorX="left"
+                maxRightCropPx={160}
+                primeActive={primeActive}
+              />
+            </div>
+          </CanvasFrame>
+
+          <details style={{ marginTop: 'var(--space-4)', cursor: 'pointer' }}>
         <summary
           className="help"
           style={{

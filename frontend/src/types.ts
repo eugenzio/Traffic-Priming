@@ -49,6 +49,11 @@ export interface Trial {
   pedestrian_side?: 'left' | 'right';
   pedestrian_direction?: 'west' | 'east' | 'north' | 'south';
   correct: Choice; // computed helper, also computed server-side
+  // Prime experiment fields
+  is_primed?: boolean;
+  prime_id?: string;
+  prime_block_index?: number | null;
+  condition_label?: 'No prime' | 'Priming';
 }
 
 export interface TrialBlock { 
@@ -89,6 +94,11 @@ export interface LogRow {
   focus_lost: 0 | 1;
   seed: number;
   created_at: string;
+  // Prime experiment fields
+  prime_condition?: 'No prime' | 'Priming';
+  prime_id?: string;
+  prime_block_index?: number | null;
+  is_primed?: boolean;
 }
 
 export interface ExperimentState {

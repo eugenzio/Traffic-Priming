@@ -1,6 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { CONFIG } from '../config'
 import type { Trial } from '../types'
+import type { Prime } from '../prime/types'
+import { PRIMES, CONTROL_PRIME } from '../prime/primes'
+import { VisualFX, type VisualCtx } from '../prime/visual'
+import { AudioFX } from '../prime/audio'
 
 // --- Car sprite (primary URL + fallback) ---
 // Use remote PNG; keep base64 as fallback
@@ -108,6 +112,8 @@ interface CanvasRendererProps {
   anchorX?: 'left' | 'center' | 'right'
   /** NEW: max number of pixels to crop off the *right* when width is tight */
   maxRightCropPx?: number
+  /** NEW: Prime activation flag - FX only start when true */
+  primeActive?: boolean
 }
 
 // === CAR IMAGE ORIENTATION ===
@@ -1005,7 +1011,8 @@ export default function CanvasRenderer({
   height = CONFIG.CANVAS_HEIGHT * 1.2,
   safeBounds,
   anchorX = 'left',
-  maxRightCropPx = 160 // up to ~160px may be cropped from the right
+  maxRightCropPx = 160, // up to ~160px may be cropped from the right
+  primeActive = false
 }: CanvasRendererProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -1017,7 +1024,110 @@ export default function CanvasRenderer({
   const [imageLoading, setImageLoading] = useState(true)
   const [imageError, setImageError] = useState(false)
 
+  // === PRIME STATE MANAGEMENT ===
+  const [activePrime, setActivePrime] = useState<Prime | null>(null)
+  const [primeStartedAt, setPrimeStartedAt] = useState<number | null>(null)
+  const primeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const reducedMotion = useRef(false)
+
   // Theme comes from CSS vars on :root ([data-theme]) – no forced theme here.
+
+  // === DETECT REDUCED MOTION ===
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+    reducedMotion.current = mediaQuery.matches
+
+    const handleChange = (e: MediaQueryListEvent) => {
+      reducedMotion.current = e.matches
+    }
+
+    mediaQuery.addEventListener('change', handleChange)
+    return () => mediaQuery.removeEventListener('change', handleChange)
+  }, [])
+
+  // === PRIME LIFECYCLE: Activate FX when primeActive becomes true ===
+  useEffect(() => {
+    // Clear any existing timer
+    if (primeTimerRef.current) {
+      clearTimeout(primeTimerRef.current)
+      primeTimerRef.current = null
+    }
+
+    // Reset prime state on trial change
+    setActivePrime(null)
+    setPrimeStartedAt(null)
+  }, [trial])
+
+  useEffect(() => {
+    // Only activate when primeActive flag is set
+    if (!primeActive) return
+
+    // Pick prime for this trial
+    const pickPrimeForTrial = (trial: Trial): Prime => {
+      const primeId = trial.prime_id
+
+      // If control or no prime_id, use control
+      if (!primeId || primeId === CONTROL_PRIME.id || !trial.is_primed) {
+        return CONTROL_PRIME
+      }
+
+      // Find matching prime
+      const prime = PRIMES.find(p => p.id === primeId)
+      return prime || CONTROL_PRIME
+    }
+
+    const prime = pickPrimeForTrial(trial)
+
+    // If control, don't schedule anything
+    if (prime.id === CONTROL_PRIME.id) {
+      return
+    }
+
+    // Schedule prime onset
+    const startPrime = (p: Prime) => {
+      setActivePrime(p)
+      setPrimeStartedAt(performance.now())
+
+      // Trigger audio FX
+      const audioPayload = p.payload.audio
+      if (audioPayload && p.modality !== 'visual') {
+        const { type, ...params } = audioPayload
+
+        // Route to correct audio function
+        if (type === 'toneSlide' && 'startHz' in params && 'endHz' in params && 'durMs' in params) {
+          AudioFX.toneSlide(params.startHz, params.endHz, params.durMs, params.gain)
+        } else if (type === 'beepSeries' && 'hz' in params && 'count' in params && 'eachMs' in params && 'gapMs' in params) {
+          AudioFX.beepSeries(params.hz, params.count, params.eachMs, params.gapMs, params.gain)
+        } else if (type === 'doubleBeep') {
+          AudioFX.doubleBeep(params.hz, params.eachMs, params.gapMs, params.gain)
+        } else if (type === 'tickPair') {
+          AudioFX.tickPair(params.hz, params.eachMs, params.gapMs, params.gain)
+        } else if (type === 'hornSoft') {
+          AudioFX.hornSoft(params.eachMs, params.gain, params.hz)
+        }
+      }
+
+      // Schedule stop
+      setTimeout(() => {
+        setActivePrime(null)
+        setPrimeStartedAt(null)
+      }, p.durationMs)
+    }
+
+    primeTimerRef.current = setTimeout(() => {
+      startPrime(prime)
+    }, prime.onsetMs)
+
+    // Cleanup on unmount or deactivation
+    return () => {
+      if (primeTimerRef.current) {
+        clearTimeout(primeTimerRef.current)
+        primeTimerRef.current = null
+      }
+      setActivePrime(null)
+      setPrimeStartedAt(null)
+    }
+  }, [primeActive, trial])
 
   // === 자동차 이미지 로딩 ===
   useEffect(() => {
@@ -1175,7 +1285,54 @@ export default function CanvasRenderer({
     // 9. Attention vignette
     drawLayer_Vignette(ctx, layout, colors)
 
-  }, [trial, canvasSize.width, canvasSize.height, normalizedSignal, B.x, B.y, B.w, B.h, carImage])
+    // 10. PRIME VISUAL FX (if active)
+    if (activePrime && primeStartedAt && activePrime.id !== CONTROL_PRIME.id) {
+      const visualPayload = activePrime.payload.visual
+      if (visualPayload && activePrime.modality !== 'audio') {
+        const nowMs = performance.now()
+
+        // Build augmented layout with anchor points for prime FX
+        const augmentedLayout = {
+          ...layout,
+          signalPos: {
+            x: layout.centerX - layout.roadWidth / 2 - 30,
+            y: layout.centerY - layout.roadWidth / 2 - 30
+          },
+          oncomingCar: oncomingCarPos,
+          egoMarker: egoCarPos,
+          activeCrosswalkId: trial.pedestrian === 'CROSSING' ? getPedestrianCrosswalkId(trial) : null
+        }
+
+        // Build VisualCtx
+        const visualCtx: VisualCtx = {
+          ctx,
+          nowMs,
+          startedAtMs: primeStartedAt,
+          payload: visualPayload,
+          layout: augmentedLayout,
+          theme: colors,
+          reducedMotion: reducedMotion.current
+        }
+
+        // Route to correct visual FX function
+        const { type } = visualPayload
+        if (type === 'signalGlow') {
+          VisualFX.signalGlow(visualCtx)
+        } else if (type === 'lensFlash') {
+          VisualFX.lensFlash(visualCtx)
+        } else if (type === 'pedBlink') {
+          VisualFX.pedBlink(visualCtx)
+        } else if (type === 'chevronShimmer') {
+          VisualFX.chevronShimmer(visualCtx)
+        } else if (type === 'egoProgressRing') {
+          VisualFX.egoProgressRing(visualCtx)
+        } else if (type === 'rearGlow') {
+          VisualFX.rearGlow(visualCtx)
+        }
+      }
+    }
+
+  }, [trial, canvasSize.width, canvasSize.height, normalizedSignal, B.x, B.y, B.w, B.h, carImage, activePrime, primeStartedAt])
 
   // Old drawing functions removed - now using layer-based system above
 

@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import StartScreen from './components/StartScreen'
 import PreSurveyGuide from './routes/PreSurveyGuide'
-import PrimeScreen from './components/PrimeScreen'
+import PrimeInterstitial from './components/PrimeInterstitial'
 import TrialScreen from './components/TrialScreen'
 import ResultScreen from './components/ResultScreen'
 import ThemeToggle from './components/ThemeToggle'
@@ -10,6 +10,7 @@ import { SectionHeader, SummaryTable, ExportButtons, Notice } from './components
 import { useExperiment } from './context/ExperimentProvider'
 import type { TrialBlock } from './types'
 import { pageVariants, pageVariantsReduced, fadeUpVariants, fadeUpVariantsReduced, staggerContainer } from './motion/tokens'
+import { getPrimeForTrial } from './design/generator'
 
 // Helper functions
 function buildSequence(blocks: TrialBlock[]): number[] {
@@ -17,14 +18,6 @@ function buildSequence(blocks: TrialBlock[]): number[] {
   const idxs = blocks.map((_, i) => i)
   const neutral = blocks.findIndex(b => b.prime_type === 'NEUTRAL')
   return neutral >= 0 ? [neutral, ...idxs.filter(i => i !== neutral)] : idxs
-}
-
-function skipPrimeForBlock(block?: TrialBlock): boolean {
-  return block?.prime_type === 'NEUTRAL'
-}
-
-function phaseForBlock(block?: TrialBlock): 'prime' | 'trial' {
-  return skipPrimeForBlock(block) ? 'trial' : 'prime'
 }
 
 /** Progress across the *sequence* (not raw block indices). */
@@ -43,7 +36,7 @@ function computeProgress(
   return { total, completedBefore, currentIndex, percent, uiBlockNumber };
 }
 
-type Phase = 'start' | 'guide' | 'prime' | 'trial' | 'done'
+type Phase = 'start' | 'guide' | 'interstitial' | 'trial' | 'done'
 
 export default function App() {
   const { blocks } = useExperiment()
@@ -57,26 +50,26 @@ export default function App() {
   const curBlock = blocks[sequence[bi]]
   const curTrial = curBlock?.trials?.[ti]
 
-  const goPrime = (nextBi: number) => { setBi(nextBi); setTi(0); setPhase('prime') }
-  const goTrial = () => setPhase('trial')
   const finishExperiment = () => setPhase('done')
-
-  const onPrimeDone = () => { 
-    // After first prime screen, go directly to done phase instead of trial
-    if (bi === 0) {
-      finishExperiment()
-    } else {
-      setTi(0); goTrial() 
-    }
-  }
 
   const onTrialComplete = () => {
     const trialsInBlock = curBlock?.trials?.length ?? 0
+    const totalTrialsSoFar = sequence.slice(0, bi).reduce((sum, idx) => sum + (blocks[idx]?.trials?.length ?? 0), 0) + ti + 1
+
+    // Check if we just completed a multiple of 3 trials
+    const shouldShowInterstitial = totalTrialsSoFar % 3 === 0 && totalTrialsSoFar > 0
+
     if (ti + 1 < trialsInBlock) {
       setTi(ti + 1)
+      if (shouldShowInterstitial) {
+        setPhase('interstitial')
+      }
     } else if (bi + 1 < sequence.length) {
-      setBi(bi + 1); setTi(0);
-      setPhase(phaseForBlock(blocks[sequence[bi + 1]])) // 'prime' for primed blocks
+      setBi(bi + 1)
+      setTi(0)
+      if (shouldShowInterstitial) {
+        setPhase('interstitial')
+      }
     } else {
       finishExperiment()
     }
@@ -101,20 +94,22 @@ export default function App() {
             onContinue={() => {
               setBi(0);
               setTi(0);
-              setPhase(phaseForBlock(blocks[sequence[0]]));
+              setPhase('trial');
             }}
           />
         )}
 
-        {phase === 'prime' && (
-          <PrimeScreen
-            key="prime"
-            primeType={curBlock?.prime_type}
-            durationSec={6}
-            onDone={onPrimeDone}
+        {/* Interstitial: Show priming info between every 3 trials */}
+        {phase === 'interstitial' && curTrial && (
+          <PrimeInterstitial
+            key={`interstitial-${bi}-${ti}`}
+            prime={getPrimeForTrial(curTrial)}
+            onContinue={() => setPhase('trial')}
+            durationMs={3000}
           />
         )}
 
+        {/* Trial phase */}
         {phase === 'trial' && (
           (() => {
             const prog = computeProgress(sequence, blocks, bi, ti);
