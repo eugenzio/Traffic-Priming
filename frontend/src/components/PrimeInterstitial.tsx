@@ -285,7 +285,7 @@ function RulesIcon() {
       <motion.polygon
         points="100,40 130,55 145,85 145,115 130,145 100,160 70,145 55,115 55,85 70,55"
         fill="#dc2626"
-        stroke="#ffffff"
+        stroke="white"
         strokeWidth="4"
         initial={{ scale: 0, rotate: 45 }}
         animate={{ scale: 1, rotate: 0 }}

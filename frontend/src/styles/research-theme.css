@@ -55,14 +55,14 @@
   /* Prime accent (teal/cyan for priming) */
   --accent-priming: #0891b2;
   --accent-priming-bg: #e0f2fe;
-  --accent-priming-fg: #0c4a6e;
-  --accent-priming-border: #7dd3fc;
+  --accent-priming-fg: #075985;
+  --accent-priming-border: #38bdf8;
 
   /* Muted palette */
   --muted-2: #f9fafb;
   --muted-3: #e5e7eb;
   --muted-6: #6b7280;
-  --muted-8: #374151;
+  --muted-8: #1f2937;
 
   /* Objects */
   --chip-bg: #1118270d;
