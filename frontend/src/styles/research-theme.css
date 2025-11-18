@@ -92,6 +92,8 @@
 
   /* Legacy aliases for compatibility */
   --bg-page: var(--bg);
+
+  color-scheme: light;
 }
 
 html[data-theme="dark"] {

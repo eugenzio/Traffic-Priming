@@ -24,7 +24,7 @@ export default function ThemeToggle() {
       style={{
         border: '1px solid var(--card-border)',
         background: 'var(--card-bg)',
-        color: 'var(--page-fg)',
+        color: 'var(--fg)',
         boxShadow: 'var(--shadow-sm)',
       }}
     >
