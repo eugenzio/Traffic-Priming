@@ -3,7 +3,6 @@ import { motion, useReducedMotion } from 'framer-motion'
 import { useExperiment } from '../context/ExperimentProvider'
 import type { Participant, CountyGA } from '../types'
 import { unlockAudio } from '../utils/audio'
-import ThemeToggle from './ThemeToggle'
 import { SectionHeader, FieldGroup, Kbd, Notice } from './ResearchUI'
 import { pageVariants, pageVariantsReduced, fadeUpVariants, fadeUpVariantsReduced, staggerContainer } from '../motion/tokens'
 
@@ -126,13 +125,12 @@ export default function StartScreen({ onBegin }: { onBegin: () => void }) {
       exit="exit"
     >
       <motion.div
-        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-6)' }}
+        style={{ marginBottom: 'var(--space-6)' }}
         variants={itemVariants}
         initial="initial"
         animate="animate"
       >
         <h1 style={{ margin: 0 }}>Left-Turn Decision Study</h1>
-        <ThemeToggle />
       </motion.div>
 
       <motion.div

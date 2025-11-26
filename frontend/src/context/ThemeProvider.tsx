@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 
 type Theme = 'light' | 'dark';
 
@@ -17,20 +17,15 @@ const ThemeContext = createContext<ThemeContextValue>({
 export const useTheme = () => useContext(ThemeContext);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // Light by default (ignores OS until user chooses)
-  const getInitialTheme = (): Theme => {
-    const saved = localStorage.getItem('theme');
-    return saved === 'dark' ? 'dark' : 'light';
-  };
-
-  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+  // Always dark mode
+  const theme: Theme = 'dark';
 
   useEffect(() => {
-    localStorage.setItem('theme', theme);
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }, []);
 
-  const toggle = () => setTheme(t => (t === 'light' ? 'dark' : 'light'));
+  const setTheme = () => {}; // No-op
+  const toggle = () => {}; // No-op
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggle }}>

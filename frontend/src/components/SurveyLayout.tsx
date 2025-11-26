@@ -1,6 +1,5 @@
 import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import ThemeToggle from './ThemeToggle';
 import { pageVariants, pageVariantsReduced } from '../motion/tokens';
 
 export default function SurveyLayout({
@@ -31,12 +30,9 @@ export default function SurveyLayout({
     >
       <div className="mx-auto max-w-[1100px] px-4 sm:px-6 lg:px-8 py-8 md:py-10">
         <header className="mb-6 md:mb-8">
-          <div className="flex items-start justify-between gap-4 mb-3">
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>
-              {title}
-            </h1>
-            <ThemeToggle />
-          </div>
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3" style={{ color: 'var(--fg)' }}>
+            {title}
+          </h1>
           {subtitle && <div className="mt-2">{subtitle}</div>}
           {progress && <div className="mt-3">{progress}</div>}
         </header>

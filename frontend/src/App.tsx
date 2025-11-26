@@ -5,7 +5,6 @@ import PreSurveyGuide from './routes/PreSurveyGuide'
 import PrimeInterstitial from './components/PrimeInterstitial'
 import TrialScreen from './components/TrialScreen'
 import ResultScreen from './components/ResultScreen'
-import ThemeToggle from './components/ThemeToggle'
 import { SectionHeader, SummaryTable, ExportButtons, Notice } from './components/ResearchUI'
 import { useExperiment } from './context/ExperimentProvider'
 import type { TrialBlock } from './types'
@@ -150,13 +149,12 @@ export default function App() {
               exit="exit"
             >
               <motion.div
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-6)' }}
+                style={{ marginBottom: 'var(--space-6)' }}
                 variants={itemVariants}
                 initial="initial"
                 animate="animate"
               >
                 <h1 style={{ margin: 0 }}>Study Complete</h1>
-                <ThemeToggle />
               </motion.div>
 
               <motion.div

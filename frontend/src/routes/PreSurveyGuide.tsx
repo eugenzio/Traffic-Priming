@@ -4,7 +4,6 @@ import CanvasRenderer, { computeTourAnchors } from '../components/CanvasRenderer
 import { CanvasTourOverlay } from '../components/tour/CanvasTourOverlay';
 import { StepList, type TourStep } from '../components/tour/StepList';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import ThemeToggle from '../components/ThemeToggle';
 import type { Trial } from '../types';
 import { pageVariants, pageVariantsReduced } from '../motion/tokens';
 
@@ -162,22 +161,20 @@ export default function PreSurveyGuide({ onBack, onContinue }: PreSurveyGuidePro
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         {/* Header */}
         <div style={{ marginBottom: 'var(--space-8)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-4)' }}>
-            <h1
-              id="tour-title"
-              style={{
-                margin: 0,
-                fontFamily: 'var(--font-serif)',
-                fontSize: 'var(--fs-3xl)',
-                fontWeight: 700,
-                color: 'var(--fg)',
-                letterSpacing: '-0.01em'
-              }}
-            >
-              Interface Tour
-            </h1>
-            <ThemeToggle />
-          </div>
+          <h1
+            id="tour-title"
+            style={{
+              margin: 0,
+              marginBottom: 'var(--space-4)',
+              fontFamily: 'var(--font-serif)',
+              fontSize: 'var(--fs-3xl)',
+              fontWeight: 700,
+              color: 'var(--fg)',
+              letterSpacing: '-0.01em'
+            }}
+          >
+            Interface Tour
+          </h1>
           <p
             style={{
               margin: 0,
