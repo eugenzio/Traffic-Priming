@@ -41,7 +41,7 @@
   --bg: #ffffff;
   --panel: #fafafa;
   --card-bg: #ffffff;
-  --card-border: rgba(0, 0, 0, 0.08);
+  --card-border: rgba(0, 0, 0, 0.12);
   --fg: #101828;
   --fg-muted: #344054;
   --fg-subtle: #667085;
@@ -70,7 +70,7 @@
   --kbd-bg: #f3f4f6;
   --kbd-fg: #111827;
   --input-bg: #ffffff;
-  --input-border: rgba(0, 0, 0, 0.12);
+  --input-border: rgba(0, 0, 0, 0.15);
   --input-disabled-bg: #f9fafb;
   --input-placeholder: #9ca3af;
 
@@ -85,9 +85,9 @@
   --space-6: 24px;
   --space-8: 32px;
   --space-12: 48px;
-  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
-  --shadow-md: 0 2px 8px rgba(16, 24, 40, 0.08);
-  --shadow-lg: 0 8px 24px rgba(16, 24, 40, 0.12);
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.08);
+  --shadow-md: 0 2px 8px rgba(16, 24, 40, 0.10);
+  --shadow-lg: 0 8px 24px rgba(16, 24, 40, 0.15);
   --ring: 0 0 0 3px rgba(21, 94, 239, 0.2);
 
   /* Legacy aliases for compatibility */
