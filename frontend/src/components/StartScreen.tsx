@@ -85,8 +85,8 @@ export default function StartScreen({ onBegin }: { onBegin: () => void }) {
         <SectionHeader index={1} title="Study Overview" />
         <p>
           This study examines left-turn decisions under controlled traffic scenes. Each trial presents
-          a single intersection with a specified signal state, an oncoming vehicle with a labeled
-          time-to-collision (TTC), and, in some trials, a pedestrian crossing.
+          a single intersection with a traffic signal, a car coming from the opposite direction with a
+          time-to-collision (TTC) label, and sometimes a pedestrian crossing.
         </p>
       </motion.div>
 
