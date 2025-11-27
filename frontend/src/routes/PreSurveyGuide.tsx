@@ -37,9 +37,9 @@ const tourSteps: TourStep[] = [
   },
   {
     id: 'car',
-    title: 'Oncoming car',
+    title: 'White car',
     targetId: 'oncomingCar',
-    body: 'This is the car coming from the opposite direction. You are making the left turn.',
+    body: "This is the car making the left turn.",
     preferredSide: 's'
   },
   {

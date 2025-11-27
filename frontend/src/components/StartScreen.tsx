@@ -84,9 +84,9 @@ export default function StartScreen({ onBegin }: { onBegin: () => void }) {
         <motion.div className="section" variants={itemVariants}>
         <SectionHeader index={1} title="Study Overview" />
         <p>
-          This study examines left-turn decisions under controlled traffic scenes. You are the driver making
-          the left turn. Each trial shows an intersection with a traffic signal, a car coming from the opposite
-          direction with a time-to-collision (TTC) label, and sometimes a pedestrian crossing.
+          This study examines left-turn decisions under controlled traffic scenes. You will decide whether
+          a white car should make a left turn. Each trial shows an intersection with a traffic signal,
+          a time-to-collision (TTC) label, and sometimes a pedestrian crossing.
         </p>
       </motion.div>
 
