@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { useExperiment } from '../context/ExperimentProvider'
 import type { Participant, CountyGA } from '../types'
-import { unlockAudio } from '../utils/audio'
 import { SectionHeader, FieldGroup, Kbd, Notice } from './ResearchUI'
 import { pageVariants, pageVariantsReduced, fadeUpVariants, fadeUpVariantsReduced, staggerContainer } from '../motion/tokens'
 
@@ -19,7 +18,6 @@ export default function StartScreen({ onBegin }: { onBegin: () => void }) {
   const { setParticipant } = useExperiment()
   const prefersReducedMotion = useReducedMotion()
   const [consent, setConsent] = useState(false)
-  const [audioTested, setAudioTested] = useState(false)
   const [participantData, setParticipantData] = useState({
     participant_id: '',
     age: '',
@@ -30,9 +28,8 @@ export default function StartScreen({ onBegin }: { onBegin: () => void }) {
     county_ga: ''
   })
 
-  const canStart = 
-    consent && 
-    audioTested && 
+  const canStart =
+    consent &&
     participantData.participant_id.trim().length > 0 &&
     String(participantData.age).trim().length > 0 &&
     !!participantData.gender &&
@@ -44,16 +41,7 @@ export default function StartScreen({ onBegin }: { onBegin: () => void }) {
     setParticipantData(prev => ({ ...prev, participant_id: id }));
   };
 
-  const handleStart = async () => {
-    console.log('[START] Begin clicked - unlocking audio before experiment');
-    
-    // Ensure audio is unlocked before starting experiment
-    try {
-      await unlockAudio();
-    } catch (e) {
-      console.error('[START] Audio unlock failed:', e);
-    }
-    
+  const handleStart = () => {
     const participant: Participant = {
       participant_id: participantData.participant_id.trim(),
       age: Number(participantData.age),
@@ -63,54 +51,9 @@ export default function StartScreen({ onBegin }: { onBegin: () => void }) {
       region_ga: participantData.region_ga as any,
       county_ga: participantData.county_ga as any
     }
-    
-    setParticipant(participant)
-    console.log('[START] Starting experiment...');
-    onBegin()
-  }
 
-  const testAudio = async () => {
-    // Unlock audio and test with beep + speech
-    try {
-      console.log('[START] Test Audio clicked - unlocking...');
-      
-      // Unlock audio gate (critical for TTS on all primes)
-      await unlockAudio();
-      
-      // Play test beep
-      const audioContext = new AudioContext()
-      const oscillator = audioContext.createOscillator()
-      const gainNode = audioContext.createGain()
-      
-      oscillator.connect(gainNode)
-      gainNode.connect(audioContext.destination)
-      
-      oscillator.frequency.setValueAtTime(440, audioContext.currentTime) // A4 note
-      gainNode.gain.setValueAtTime(0.1, audioContext.currentTime)
-      
-      oscillator.start()
-      oscillator.stop(audioContext.currentTime + 0.5)
-      
-      // Test TTS
-      setTimeout(async () => {
-        try {
-          const testUtterance = new SpeechSynthesisUtterance('Audio test');
-          testUtterance.lang = 'en-US';
-          testUtterance.rate = 1.0;
-          testUtterance.volume = 0.5;
-          speechSynthesis.speak(testUtterance);
-          console.log('[START] Test speech triggered');
-        } catch (e) {
-          console.error('[START] Test speech failed:', e);
-        }
-      }, 600);
-      
-      setAudioTested(true)
-      console.log('[START] ✅ Audio test complete');
-    } catch (error) {
-      console.error('[START] ❌ Audio test failed:', error)
-      alert('Audio test failed. Please check your audio settings.')
-    }
+    setParticipant(participant)
+    onBegin()
   }
 
   const containerVariants = prefersReducedMotion ? {} : staggerContainer;
@@ -281,15 +224,6 @@ export default function StartScreen({ onBegin }: { onBegin: () => void }) {
                   <option value="Outside of Georgia">Outside of Georgia</option>
                 </select>
               </FieldGroup>
-
-              <div>
-                <button className="btn" onClick={testAudio}>
-                  {audioTested ? '✓ Audio test complete' : 'Test audio'}
-                </button>
-                <div className="help" style={{ marginTop: 'var(--space-2)' }}>
-                  Click to verify your audio system is working
-                </div>
-              </div>
 
               <Notice>
                 <label className="checkbox-label">
