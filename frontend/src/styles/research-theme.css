@@ -438,3 +438,39 @@ p, li {
   color: var(--fg);
   margin-bottom: var(--space-2);
 }
+
+/* ========================
+   Mobile optimization
+   ======================== */
+
+/* Show touch controls only on mobile/tablet */
+.mobile-only {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-only {
+    display: block;
+  }
+}
+
+/* Support for touch devices regardless of screen size */
+@media (hover: none) and (pointer: coarse) {
+  .mobile-only {
+    display: block;
+  }
+}
+
+/* Improve touch target sizes on mobile */
+@media (max-width: 768px) {
+  .btn {
+    min-height: 44px; /* iOS recommended touch target size */
+    padding: var(--space-3) var(--space-4);
+  }
+
+  select.select,
+  input.input {
+    min-height: 44px;
+    font-size: 16px; /* Prevent iOS zoom on focus */
+  }
+}

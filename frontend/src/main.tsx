@@ -5,6 +5,7 @@ import './styles.css'
 import './styles/theme.css'
 import './styles/tour-theme.css'
 import App from './App'
+import ErrorBoundary from './components/ErrorBoundary'
 import { ExperimentProvider } from './context/ExperimentProvider'
 import { ThemeProvider } from './context/ThemeProvider'
 import trialTape from './data/trial_tape.sample.json'
@@ -18,10 +19,12 @@ const root = createRoot(document.getElementById('root')!)
 
 root.render(
   <React.StrictMode>
-    <ThemeProvider>
-      <ExperimentProvider blocks={trialTape.blocks}>
-        <App />
-      </ExperimentProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <ExperimentProvider blocks={trialTape.blocks}>
+          <App />
+        </ExperimentProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   </React.StrictMode>
 )

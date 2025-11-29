@@ -1227,25 +1227,36 @@ export default function CanvasRenderer({
     const canvas = canvasRef.current
     if (!canvas) return
 
-    const ctx = canvas.getContext('2d')
+    // Performance optimization: use alpha:false for opaque canvas (faster compositing)
+    const ctx = canvas.getContext('2d', {
+      alpha: true, // Keep alpha for transparency support
+      desynchronized: true // Allow browser to optimize rendering
+    })
     if (!ctx) return
 
-    // Get theme colors from document root (respects [data-theme] attribute)
-    const colors = getThemeColors(document.documentElement)
+    // Performance optimization: use requestAnimationFrame for smoother rendering
+    let rafId: number
 
-    // Clear canvas with transparent background
-    ctx.clearRect(0, 0, canvasSize.width, canvasSize.height)
+    const render = () => {
+      // Get theme colors from document root (respects [data-theme] attribute)
+      const colors = getThemeColors(document.documentElement)
 
-    // Initialize intersection layout with dynamic size
-    const layout = initializeIntersectionLayout(canvasSize.width, canvasSize.height, B)
+      // Performance optimization: save/restore context state once
+      ctx.save()
 
-    // === NEW LAYER-BASED RENDERING PIPELINE ===
-    
-    // 1. Background layer (grass areas)
-    drawLayer_Background(ctx, layout, colors)
-    
-    // 2. Road layer (asphalt + borders)
-    drawLayer_Road(ctx, layout, colors)
+      // Clear canvas with transparent background
+      ctx.clearRect(0, 0, canvasSize.width, canvasSize.height)
+
+      // Initialize intersection layout with dynamic size
+      const layout = initializeIntersectionLayout(canvasSize.width, canvasSize.height, B)
+
+      // === NEW LAYER-BASED RENDERING PIPELINE ===
+
+      // 1. Background layer (grass areas)
+      drawLayer_Background(ctx, layout, colors)
+
+      // 2. Road layer (asphalt + borders)
+      drawLayer_Road(ctx, layout, colors)
     
     // 3. Lane markings
     drawLayer_Lanes(ctx, layout, colors)
@@ -1332,6 +1343,17 @@ export default function CanvasRenderer({
       }
     }
 
+      // Performance optimization: restore context state
+      ctx.restore()
+    }
+
+    // Schedule render with requestAnimationFrame for smoother performance
+    rafId = requestAnimationFrame(render)
+
+    // Cleanup: cancel animation frame on unmount or dependency change
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId)
+    }
   }, [trial, canvasSize.width, canvasSize.height, normalizedSignal, B.x, B.y, B.w, B.h, carImage, activePrime, primeStartedAt])
 
   // Old drawing functions removed - now using layer-based system above

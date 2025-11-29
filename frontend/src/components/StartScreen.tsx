@@ -15,7 +15,7 @@ const COUNTY_GROUPS = {
 } as const;
 
 export default function StartScreen({ onBegin }: { onBegin: () => void }) {
-  const { setParticipant } = useExperiment()
+  const { setParticipant, clearSession } = useExperiment()
   const prefersReducedMotion = useReducedMotion()
   const [consent, setConsent] = useState(false)
   const [participantData, setParticipantData] = useState({
@@ -42,6 +42,9 @@ export default function StartScreen({ onBegin }: { onBegin: () => void }) {
   };
 
   const handleStart = () => {
+    // Clear previous session data before starting a new experiment
+    clearSession()
+
     const participant: Participant = {
       participant_id: participantData.participant_id.trim(),
       age: Number(participantData.age),

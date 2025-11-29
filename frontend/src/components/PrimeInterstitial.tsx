@@ -11,44 +11,51 @@ interface PrimeInterstitialProps {
 // Map prime IDs to visual content
 const PRIME_VISUALS: Record<string, {
   title: string
-  goal: string
-  vibe: string
+  message: string
+  subtitle: string
+  bgColor: string
   IconComponent: React.FC
 }> = {
-  'social_ped': {
-    title: 'Pedestrian',
-    goal: 'Think about people on the road and protecting humans.',
-    vibe: 'People first. Be careful for others.',
-    IconComponent: PedestrianIcon
-  },
-  'signal_aware': {
-    title: 'Traffic Lights',
-    goal: 'Activate timing and signal awareness.',
-    vibe: 'Follow signals. Wait for the right moment to act.',
+  'go_arrow': {
+    title: 'GO SIGNALS',
+    message: 'Focus on green signals',
+    subtitle: 'Proceed when safe',
+    bgColor: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)',
     IconComponent: TrafficLightIcon
   },
-  'timing_ttc': {
-    title: 'TTC (Time To Collision)',
-    goal: 'Make the brain estimate distance and timing to avoid hitting something.',
-    vibe: 'Get ready fast. Pay attention to timing and space.',
+  'caution_amber': {
+    title: 'CAUTION',
+    message: 'Exercise caution',
+    subtitle: 'Safety first - watch for warnings',
+    bgColor: 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)',
+    IconComponent: TrafficLightIcon
+  },
+  'ped_salience': {
+    title: 'PEDESTRIANS',
+    message: 'Watch for pedestrians',
+    subtitle: 'Pedestrian safety is priority',
+    bgColor: 'linear-gradient(135deg, #f97316 0%, #fb923c 100%)',
+    IconComponent: PedestrianIcon
+  },
+  'oncoming_speed': {
+    title: 'VEHICLE SPEED',
+    message: 'Monitor oncoming traffic',
+    subtitle: 'Watch for fast-moving vehicles',
+    bgColor: 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)',
     IconComponent: TTCIcon
   },
-  'rule_follow': {
-    title: 'Rules',
-    goal: 'Remind them to follow laws and structure.',
-    vibe: 'Do it correctly. Follow the system.',
-    IconComponent: RulesIcon
-  },
-  'patience_wait': {
-    title: 'Patience',
-    goal: 'Slow down impulses and reduce rush.',
-    vibe: 'Chill. Take your time. No hurry.',
+  'time_pressure': {
+    title: 'EFFICIENCY',
+    message: 'Make efficient decisions',
+    subtitle: 'Respond promptly when clear',
+    bgColor: 'linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%)',
     IconComponent: PatienceIcon
   },
-  'responsibility': {
-    title: 'Responsibility',
-    goal: 'Remind them their decisions affect others.',
-    vibe: 'Your actions matter. Be careful and responsible.',
+  'social_norm': {
+    title: 'TRAFFIC FLOW',
+    message: 'Keep pace with traffic',
+    subtitle: 'Others are waiting behind you',
+    bgColor: 'linear-gradient(135deg, #6b7280 0%, #9ca3af 100%)',
     IconComponent: ResponsibilityIcon
   }
 }
@@ -513,10 +520,31 @@ export default function PrimeInterstitial({ prime, onContinue, durationMs = 5000
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="min-h-screen flex items-center justify-center"
-      style={{ background: 'var(--bg)', padding: '48px 24px' }}
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: !isControl && visual ? visual.bgColor : 'var(--bg)',
+        padding: '48px 24px',
+        position: 'relative'
+      }}
     >
-      <div className="text-center max-w-3xl">
+      {/* Subtle overlay for readability */}
+      {!isControl && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.15 }}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.3)',
+            pointerEvents: 'none'
+          }}
+        />
+      )}
+
+      <div style={{ textAlign: 'center', maxWidth: '800px', position: 'relative', zIndex: 1 }}>
         {!isControl && visual && (
           <>
             {/* Badge */}
@@ -528,18 +556,18 @@ export default function PrimeInterstitial({ prime, onContinue, durationMs = 5000
               <div
                 style={{
                   display: 'inline-block',
-                  padding: '8px 24px',
+                  padding: '10px 28px',
                   borderRadius: '9999px',
-                  background: 'var(--accent-priming-bg)',
-                  color: 'var(--accent-priming-fg)',
-                  fontSize: '13px',
+                  background: 'rgba(255, 255, 255, 0.25)',
+                  color: 'white',
+                  fontSize: '14px',
                   fontWeight: 700,
-                  letterSpacing: '0.08em',
+                  letterSpacing: '0.1em',
                   textTransform: 'uppercase',
-                  marginBottom: '32px',
-                  border: '2px solid',
-                  borderColor: 'var(--accent-priming-border)',
-                  boxShadow: 'var(--shadow-md)'
+                  marginBottom: '40px',
+                  border: '2px solid rgba(255, 255, 255, 0.4)',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+                  backdropFilter: 'blur(10px)'
                 }}
               >
                 Focus Area
@@ -551,69 +579,93 @@ export default function PrimeInterstitial({ prime, onContinue, durationMs = 5000
               initial={{ scale: 0.5, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-              style={{ marginBottom: '32px' }}
+              style={{ marginBottom: '48px' }}
             >
-              <visual.IconComponent />
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.95)',
+                borderRadius: '24px',
+                padding: '32px',
+                display: 'inline-block',
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.2)'
+              }}>
+                <visual.IconComponent />
+              </div>
             </motion.div>
 
             {/* Title */}
             <motion.h1
               initial={{ y: 30, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 1.3 }}
+              transition={{ delay: 0.5, duration: 0.6 }}
               style={{
-                fontSize: '56px',
-                fontWeight: 700,
-                color: 'var(--fg)',
+                fontSize: 'clamp(40px, 8vw, 72px)',
+                fontWeight: 800,
+                color: 'white',
                 marginBottom: '24px',
-                fontFamily: 'var(--font-serif)',
-                letterSpacing: '-0.02em'
+                letterSpacing: '0.02em',
+                textShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
               }}
             >
               {visual.title}
             </motion.h1>
 
-            {/* Goal */}
+            {/* Main Message */}
             <motion.p
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 1.5 }}
+              transition={{ delay: 0.7, duration: 0.6 }}
               style={{
-                fontSize: '18px',
-                color: 'var(--fg-muted)',
-                lineHeight: '1.7',
-                marginBottom: '20px',
-                maxWidth: '600px',
-                margin: '0 auto 20px'
+                fontSize: 'clamp(24px, 4vw, 36px)',
+                fontWeight: 600,
+                color: 'white',
+                lineHeight: '1.4',
+                marginBottom: '16px',
+                textShadow: '0 2px 12px rgba(0, 0, 0, 0.3)'
               }}
             >
-              {visual.goal}
+              {visual.message}
             </motion.p>
 
-            {/* Mental Vibe */}
+            {/* Subtitle */}
+            <motion.p
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.9, duration: 0.6 }}
+              style={{
+                fontSize: 'clamp(16px, 2vw, 20px)',
+                color: 'rgba(255, 255, 255, 0.9)',
+                lineHeight: '1.6',
+                maxWidth: '600px',
+                margin: '0 auto',
+                textShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
+              }}
+            >
+              {visual.subtitle}
+            </motion.p>
+
+            {/* Get Ready indicator */}
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 1.7 }}
+              transition={{ delay: 1.2, duration: 0.6 }}
               style={{
+                marginTop: '64px',
+                padding: '16px 32px',
+                background: 'rgba(255, 255, 255, 0.2)',
+                borderRadius: '16px',
                 display: 'inline-block',
-                padding: '12px 28px',
-                background: 'var(--muted-2)',
-                border: '2px solid var(--accent-priming-border)',
-                borderRadius: '12px',
-                marginTop: '16px'
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                backdropFilter: 'blur(10px)'
               }}
             >
-              <p
-                style={{
-                  fontSize: '16px',
-                  fontWeight: 600,
-                  color: 'var(--accent-priming)',
-                  margin: 0,
-                  fontStyle: 'italic'
-                }}
-              >
-                "{visual.vibe}"
+              <p style={{
+                fontSize: '16px',
+                fontWeight: 600,
+                color: 'white',
+                margin: 0,
+                letterSpacing: '0.05em'
+              }}>
+                Get ready for the next trials
               </p>
             </motion.div>
           </>
@@ -624,28 +676,28 @@ export default function PrimeInterstitial({ prime, onContinue, durationMs = 5000
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             style={{
-              fontSize: '40px',
+              fontSize: '48px',
               fontWeight: 600,
-              color: 'var(--fg-muted)',
-              fontFamily: 'var(--font-sans)'
+              color: 'var(--fg-muted)'
             }}
           >
             Get ready...
           </motion.h1>
         )}
 
-        {/* Progress indicator */}
+        {/* Auto-start indicator */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: isControl ? 0.5 : 2 }}
+          transition={{ delay: isControl ? 0.5 : 1.5 }}
           style={{
-            marginTop: '64px',
-            color: 'var(--fg-subtle)',
-            fontSize: '14px'
+            marginTop: isControl ? '32px' : '48px',
+            color: isControl ? 'var(--fg-subtle)' : 'rgba(255, 255, 255, 0.7)',
+            fontSize: '14px',
+            fontWeight: 500
           }}
         >
-          Starting next trials shortly...
+          Starting automatically...
         </motion.div>
       </div>
     </motion.div>

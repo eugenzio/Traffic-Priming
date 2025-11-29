@@ -97,6 +97,13 @@ const tourSteps: TourStep[] = [
     targetId: 'vignette',
     body: 'A subtle vignette focuses your attention on the center of the scene.',
     preferredSide: 'e'
+  },
+  {
+    id: 'controls',
+    title: 'Keyboard controls',
+    targetId: 'canvas',
+    body: 'Press ← (left arrow) to turn left, or Space to wait. Try it now!',
+    preferredSide: 's'
   }
 ];
 
@@ -110,6 +117,7 @@ export default function PreSurveyGuide({ onBack, onContinue }: PreSurveyGuidePro
   const [hasSeenTour, setHasSeenTour] = useLocalStorage(TOUR_STORAGE_KEY, false);
   const [currentStep, setCurrentStep] = useState(0);
   const [canvasSize, setCanvasSize] = useState({ width: 600, height: 450 });
+  const [keyboardPracticed, setKeyboardPracticed] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Measure canvas container
@@ -130,6 +138,20 @@ export default function PreSurveyGuide({ onBack, onContinue }: PreSurveyGuidePro
 
     return () => resizeObserver.disconnect();
   }, []);
+
+  // Listen for keyboard practice on the controls step
+  useEffect(() => {
+    if (currentStep !== tourSteps.length - 1) return; // Only on last step (controls)
+
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft' || e.code === 'Space' || e.key === ' ') {
+        setKeyboardPracticed(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [currentStep]);
 
   // Compute anchors
   const anchors = computeTourAnchors(canvasSize.width, canvasSize.height, sampleTrial);
@@ -226,7 +248,19 @@ export default function PreSurveyGuide({ onBack, onContinue }: PreSurveyGuidePro
               />
             </div>
             <div className="help" style={{ marginTop: 'var(--space-3)', textAlign: 'center' }}>
-              Use arrow keys or click checklist items to navigate
+              {currentStep === tourSteps.length - 1 ? (
+                keyboardPracticed ? (
+                  <span style={{ color: 'var(--success)', fontWeight: 600 }}>
+                    ✓ Great! You've practiced the controls
+                  </span>
+                ) : (
+                  <span>
+                    Press ← or Space to practice
+                  </span>
+                )
+              ) : (
+                'Use arrow keys or click checklist items to navigate'
+              )}
             </div>
           </div>
 

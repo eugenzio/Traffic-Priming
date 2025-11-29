@@ -102,8 +102,9 @@ export interface LogRow {
 }
 
 export interface ExperimentState {
-  phase: 'start' | 'prime' | 'trial' | 'done';
+  phase: 'start' | 'guide' | 'practice' | 'prime' | 'trial' | 'done';
   currentBlock: number;
   currentTrial: number;
+  currentPractice: number; // Track which practice trial (0-2)
   logs: Omit<LogRow, 'created_at'>[];
 }

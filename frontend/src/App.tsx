@@ -4,12 +4,15 @@ import StartScreen from './components/StartScreen'
 import PreSurveyGuide from './routes/PreSurveyGuide'
 import PrimeInterstitial from './components/PrimeInterstitial'
 import TrialScreen from './components/TrialScreen'
+import PracticeTrialScreen from './components/PracticeTrialScreen'
+import ReadyScreen from './components/ReadyScreen'
+import FeedbackSurvey from './components/FeedbackSurvey'
 import ResultScreen from './components/ResultScreen'
 import { SectionHeader, SummaryTable, ExportButtons, Notice } from './components/ResearchUI'
 import { useExperiment } from './context/ExperimentProvider'
 import type { TrialBlock } from './types'
 import { pageVariants, pageVariantsReduced, fadeUpVariants, fadeUpVariantsReduced, staggerContainer } from './motion/tokens'
-import { getPrimeForTrial } from './design/generator'
+import { getPrimeForTrial, generatePracticeTrials } from './design/generator'
 
 // Helper functions
 function buildSequence(blocks: TrialBlock[]): number[] {
@@ -35,21 +38,39 @@ function computeProgress(
   return { total, completedBefore, currentIndex, percent, uiBlockNumber };
 }
 
-type Phase = 'start' | 'guide' | 'interstitial' | 'trial' | 'done'
+type Phase = 'start' | 'guide' | 'practice' | 'ready' | 'interstitial' | 'trial' | 'feedback' | 'done'
 
 export default function App() {
-  const { blocks } = useExperiment()
+  const { blocks, sessionMetadata } = useExperiment()
   const prefersReducedMotion = useReducedMotion()
   const [phase, setPhase] = useState<Phase>('start')
   const [bi, setBi] = useState(0) // index in 'sequence'
   const [ti, setTi] = useState(0) // trial index in current block
+  const [pi, setPi] = useState(0) // practice trial index (0-2)
+  const [feedbackData, setFeedbackData] = useState<any>(null)
+
+  // Generate practice trials
+  const practiceTrials = useMemo(() => generatePracticeTrials(), [])
 
   // Build execution sequence: Neutral block first, then the rest
   const sequence = useMemo(() => buildSequence(blocks), [blocks])
   const curBlock = blocks[sequence[bi]]
   const curTrial = curBlock?.trials?.[ti]
 
-  const finishExperiment = () => setPhase('done')
+  const finishExperiment = () => {
+    // Log session completion
+    const endTime = new Date().toISOString();
+    const startTime = new Date(sessionMetadata.startTime).getTime();
+    const duration = Date.now() - startTime;
+    console.log('[Session] Experiment completed:', {
+      sessionId: sessionMetadata.sessionId,
+      startTime: sessionMetadata.startTime,
+      endTime,
+      durationMs: duration,
+      durationMinutes: (duration / 60000).toFixed(2)
+    });
+    setPhase('feedback');
+  }
 
   const onTrialComplete = () => {
     const trialsInBlock = curBlock?.trials?.length ?? 0
@@ -58,19 +79,20 @@ export default function App() {
     // Check if we just completed a multiple of 3 trials
     const shouldShowInterstitial = totalTrialsSoFar % 3 === 0 && totalTrialsSoFar > 0
 
+    // Advance to next trial
     if (ti + 1 < trialsInBlock) {
       setTi(ti + 1)
-      if (shouldShowInterstitial) {
-        setPhase('interstitial')
-      }
     } else if (bi + 1 < sequence.length) {
       setBi(bi + 1)
       setTi(0)
-      if (shouldShowInterstitial) {
-        setPhase('interstitial')
-      }
     } else {
       finishExperiment()
+      return
+    }
+
+    // Show interstitial if needed
+    if (shouldShowInterstitial) {
+      setPhase('interstitial')
     }
   }
 
@@ -91,22 +113,58 @@ export default function App() {
             key="guide"
             onBack={() => setPhase('start')}
             onContinue={() => {
+              setPi(0);
+              setPhase('practice');
+            }}
+          />
+        )}
+
+        {/* Practice: 3 practice trials with feedback */}
+        {phase === 'practice' && (
+          <PracticeTrialScreen
+            key={`practice-${pi}`}
+            trial={practiceTrials[pi]}
+            practiceNumber={pi + 1}
+            onComplete={() => {
+              if (pi + 1 < practiceTrials.length) {
+                setPi(pi + 1);
+              } else {
+                // Practice complete, show ready screen
+                setPhase('ready');
+              }
+            }}
+          />
+        )}
+
+        {/* Ready: Confirmation before starting real experiment */}
+        {phase === 'ready' && (
+          <ReadyScreen
+            key="ready"
+            onBegin={() => {
               setBi(0);
               setTi(0);
               setPhase('trial');
+            }}
+            onBack={() => {
+              setPi(0);
+              setPhase('practice');
             }}
           />
         )}
 
         {/* Interstitial: Show priming info between every 3 trials */}
-        {phase === 'interstitial' && curTrial && (
-          <PrimeInterstitial
-            key={`interstitial-${bi}-${ti}`}
-            prime={getPrimeForTrial(curTrial)}
-            onContinue={() => setPhase('trial')}
-            durationMs={3000}
-          />
-        )}
+        {phase === 'interstitial' && curTrial && (() => {
+          const prime = getPrimeForTrial(curTrial);
+          console.log('[Interstitial] Showing prime:', prime.id, 'for trial:', curTrial.scene_id, curTrial);
+          return (
+            <PrimeInterstitial
+              key={`interstitial-${bi}-${ti}`}
+              prime={prime}
+              onContinue={() => setPhase('trial')}
+              durationMs={3000}
+            />
+          );
+        })()}
 
         {/* Trial phase */}
         {phase === 'trial' && (
@@ -129,12 +187,29 @@ export default function App() {
           })()
         )}
 
+        {/* Feedback: Post-experiment survey */}
+        {phase === 'feedback' && (
+          <FeedbackSurvey
+            key="feedback"
+            onComplete={(data) => {
+              setFeedbackData(data);
+              console.log('Feedback received:', data);
+              setPhase('done');
+            }}
+            onSkip={() => {
+              console.log('Feedback skipped');
+              setPhase('done');
+            }}
+          />
+        )}
+
       {phase === 'done' && (
         (() => {
-          const { getSummary, getParticipantSnapshot, downloadCSV, getResearchDisclaimer } = useExperiment();
+          const { getSummary, getParticipantSnapshot, downloadCSV, getResearchDisclaimer, getAttentionCheckResults } = useExperiment();
           const { total, correct, incorrect, accuracy } = getSummary();
           const p = getParticipantSnapshot();
           const disclaimer = getResearchDisclaimer();
+          const attentionResults = getAttentionCheckResults();
 
           const containerVariants = prefersReducedMotion ? {} : staggerContainer;
           const itemVariants = prefersReducedMotion ? fadeUpVariantsReduced : fadeUpVariants;
@@ -216,6 +291,49 @@ export default function App() {
                   </div>
                 </div>
               </motion.div>
+
+              {attentionResults.totalChecks > 0 && (
+                <motion.div className="section" variants={itemVariants}>
+                  <SectionHeader title="Data Quality" />
+                  <div className="card">
+                    <div className="card-body">
+                      <p className="help" style={{ marginBottom: 'var(--space-3)' }}>
+                        Attention checks help ensure data quality by including obvious scenarios throughout the experiment.
+                      </p>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 'var(--space-4)' }}>
+                        <div style={{ textAlign: 'center', padding: 'var(--space-3)', background: 'var(--panel)', borderRadius: 'var(--radius-md)' }}>
+                          <div style={{
+                            fontSize: 'var(--fs-2xl)',
+                            fontWeight: 700,
+                            color: attentionResults.passed ? 'var(--success)' : 'var(--danger)',
+                            marginBottom: 'var(--space-2)'
+                          }}>
+                            {attentionResults.passed ? '✓' : '✗'}
+                          </div>
+                          <div className="help">Status</div>
+                        </div>
+                        <div style={{ textAlign: 'center', padding: 'var(--space-3)', background: 'var(--panel)', borderRadius: 'var(--radius-md)' }}>
+                          <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: 'var(--fg)', marginBottom: 'var(--space-2)' }}>
+                            {attentionResults.correctChecks}/{attentionResults.totalChecks}
+                          </div>
+                          <div className="help">Correct</div>
+                        </div>
+                        <div style={{ textAlign: 'center', padding: 'var(--space-3)', background: 'var(--panel)', borderRadius: 'var(--radius-md)' }}>
+                          <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: 'var(--fg)', marginBottom: 'var(--space-2)' }}>
+                            {Math.round(attentionResults.passRate * 100)}%
+                          </div>
+                          <div className="help">Pass Rate</div>
+                        </div>
+                      </div>
+                      {!attentionResults.passed && (
+                        <p className="help" style={{ marginTop: 'var(--space-3)', color: 'var(--warning-fg)', textAlign: 'center' }}>
+                          Note: Some attention checks were missed. This may affect data quality.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
 
               <motion.div className="section" variants={itemVariants}>
                 <SectionHeader title="Export Data" />

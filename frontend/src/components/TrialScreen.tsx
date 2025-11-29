@@ -7,11 +7,12 @@ import SurveyLayout from './SurveyLayout'
 import CanvasFrame from './CanvasFrame'
 import ProgressBar from './ui/ProgressBar'
 import Badge from './ui/Badge'
+import TouchControls from './TouchControls'
 import { SceneLegend, Kbd } from './ResearchUI'
 import { canLeftTurnNow } from '../utils/decision'
 import { downloadCanvasSnapshot } from '../utils/canvasSnapshot'
 import ConditionPill from './ConditionPill'
-import { getPrimeForTrial } from '../design/generator'
+import { getPrimeForTrial, isAttentionCheck } from '../design/generator'
 
 // Safe bounds type for CanvasRenderer
 type Bounds = { x: number; y: number; w: number; h: number };
@@ -52,6 +53,7 @@ export default function TrialScreen({
 }) {
   const { submitLog, participant, pushLocalLog } = useExperiment()
   const rtStart = useRef<number | null>(null)
+  const [responding, setResponding] = useState(false) // Prevent double-tap
 
   // Prime state - activate immediately when trial loads
   const [primeActive, setPrimeActive] = useState(false)
@@ -82,16 +84,30 @@ export default function TrialScreen({
   // Initialize RT start time when trial loads
   useEffect(() => {
     rtStart.current = performance.now()
+    setResponding(false)
   }, [trial])
 
-  // Keyboard handler
-  useEffect(() => {
-    const onKey = async (e: KeyboardEvent) => {
-      if (e.key !== 'ArrowLeft' && e.code !== 'Space' && e.key !== ' ') return
-      const choice: Choice = e.key === 'ArrowLeft' ? 'turn_left' : 'wait'
-      const rt = rtStart.current ? Math.round(performance.now() - rtStart.current) : 0
-      const correctChoice = judgeCorrect(trial)
-      const logRow = {
+  // Handle choice (keyboard or touch)
+  const handleChoice = async (choice: Choice) => {
+    if (responding) return // Prevent double submission
+    setResponding(true)
+
+    const rt = rtStart.current ? Math.round(performance.now() - rtStart.current) : 0
+    const correctChoice = judgeCorrect(trial)
+
+    // Detect RT outliers
+    const isTooFast = rt < 200; // <200ms = likely random clicking
+    const isTooSlow = rt > 10000; // >10s = likely distracted
+    const isOutlier = isTooFast || isTooSlow;
+
+    if (isOutlier) {
+      console.warn(`[RT Outlier] Trial ${trial.scene_id}: ${rt}ms (${isTooFast ? 'too fast' : 'too slow'})`);
+    }
+
+    // Check if this is an attention check trial
+    const isAttention = isAttentionCheck(trial);
+
+    const logRow = {
         participant_id: participant?.participant_id || 'anon',
         age: (participant?.age ?? 0) as number,
         gender: (participant?.gender ?? 'Prefer not to say') as string,
@@ -119,18 +135,33 @@ export default function TrialScreen({
         prime_condition: trial.condition_label,
         prime_id: trial.prime_id,
         prime_block_index: trial.prime_block_index,
-        is_primed: trial.is_primed
-      };
-      await submitLog(logRow)
+        is_primed: trial.is_primed,
 
-      // Mirror log locally
-      pushLocalLog(logRow);
+        // Quality control flags
+        rt_outlier: isOutlier ? 1 : 0,
+        rt_too_fast: isTooFast ? 1 : 0,
+        rt_too_slow: isTooSlow ? 1 : 0,
+        is_attention_check: isAttention ? 1 : 0
+      } as any;
+    await submitLog(logRow)
 
-      onNext()
+    // Mirror log locally
+    pushLocalLog(logRow);
+
+    onNext()
+  }
+
+  // Keyboard handler
+  useEffect(() => {
+    const onKey = async (e: KeyboardEvent) => {
+      if (e.key !== 'ArrowLeft' && e.code !== 'Space' && e.key !== ' ') return
+      e.preventDefault()
+      const choice: Choice = e.key === 'ArrowLeft' ? 'turn_left' : 'wait'
+      await handleChoice(choice)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [block, trial, blockIdx, trialIdx, participant, submitLog, pushLocalLog, onNext])
+  }, [responding])
 
   return (
     <SurveyLayout
@@ -238,6 +269,11 @@ export default function TrialScreen({
           </button>
         </div>
       </details>
+
+      {/* Touch controls for mobile */}
+      <div className="mobile-only" style={{ marginTop: 'var(--space-4)' }}>
+        <TouchControls onChoice={handleChoice} disabled={responding} />
+      </div>
     </SurveyLayout>
   )
 }
