@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>오프라인 데이터 업로드</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0b0f14;
+      color: #ecf2f8;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      color: #7aa2ff;
+    }
+
+    .card {
+      background: #121821;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .status {
+      padding: 15px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      font-weight: 600;
+    }
+
+    .status.info {
+      background: rgba(122, 162, 255, 0.1);
+      border: 1px solid rgba(122, 162, 255, 0.3);
+      color: #7aa2ff;
+    }
+
+    .status.success {
+      background: rgba(81, 207, 102, 0.1);
+      border: 1px solid rgba(81, 207, 102, 0.3);
+      color: #51cf66;
+    }
+
+    .status.error {
+      background: rgba(255, 107, 107, 0.1);
+      border: 1px solid rgba(255, 107, 107, 0.3);
+      color: #ff6b6b;
+    }
+
+    button {
+      background: #7aa2ff;
+      color: #0b0f14;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+
+    button:hover {
+      background: #5a88e5;
+    }
+
+    button:disabled {
+      background: #2a3441;
+      color: #666;
+      cursor: not-allowed;
+    }
+
+    pre {
+      background: #0a0e13;
+      padding: 15px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 12px;
+      line-height: 1.5;
+      border: 1px solid rgba(255,255,255,0.1);
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .count {
+      font-size: 24px;
+      font-weight: bold;
+      color: #7aa2ff;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📤 오프라인 데이터 업로드</h1>
+
+    <div class="card">
+      <h2 style="margin-bottom: 15px; color: #a0b3c5;">1️⃣ 오프라인 큐 확인</h2>
+      <button onclick="checkQueue()">🔍 큐 확인</button>
+      <div id="queueStatus"></div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-bottom: 15px; color: #a0b3c5;">2️⃣ Supabase 연결 테스트</h2>
+      <button onclick="testConnection()">🔌 연결 테스트</button>
+      <div id="connectionStatus"></div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-bottom: 15px; color: #a0b3c5;">3️⃣ 데이터 업로드</h2>
+      <button onclick="uploadQueue()" id="uploadBtn" disabled>⬆️ 업로드 시작</button>
+      <button onclick="clearQueue()" style="background: #b42318; color: white;">🗑️ 큐 비우기</button>
+      <div id="uploadStatus"></div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-bottom: 15px; color: #a0b3c5;">📊 데이터 미리보기</h2>
+      <button onclick="previewData()">👁️ 데이터 보기</button>
+      <div id="dataPreview"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase } from './frontend/src/lib/supabase.ts';
+    window.supabaseClient = supabase;
+
+    window.checkQueue = function() {
+      const queue = JSON.parse(localStorage.getItem('triallogs_offline_v1') || '[]');
+      const sessionBackup = JSON.parse(localStorage.getItem('experiment_session_backup') || 'null');
+
+      let html = `<div class="status info">
+        <div class="count">${queue.length}개</div>
+        오프라인 큐에 ${queue.length}개의 데이터가 대기 중입니다.
+      </div>`;
+
+      if (sessionBackup && sessionBackup.clientLogs) {
+        html += `<div class="status info" style="margin-top: 10px;">
+          <div class="count">${sessionBackup.clientLogs.length}개</div>
+          localStorage에 ${sessionBackup.clientLogs.length}개의 데이터가 저장되어 있습니다.
+        </div>`;
+      }
+
+      document.getElementById('queueStatus').innerHTML = html;
+
+      if (queue.length > 0 || (sessionBackup && sessionBackup.clientLogs && sessionBackup.clientLogs.length > 0)) {
+        document.getElementById('uploadBtn').disabled = false;
+      }
+    };
+
+    window.testConnection = async function() {
+      document.getElementById('connectionStatus').innerHTML = '<div class="status info">연결 테스트 중...</div>';
+
+      try {
+        const { data, error } = await window.supabaseClient
+          .from('trial_logs')
+          .select('count')
+          .limit(1);
+
+        if (error) throw error;
+
+        document.getElementById('connectionStatus').innerHTML =
+          '<div class="status success">✅ Supabase 연결 성공!</div>';
+      } catch (error) {
+        document.getElementById('connectionStatus').innerHTML =
+          `<div class="status error">❌ 연결 실패: ${error.message}</div>`;
+      }
+    };
+
+    window.uploadQueue = async function() {
+      const queue = JSON.parse(localStorage.getItem('triallogs_offline_v1') || '[]');
+      const sessionBackup = JSON.parse(localStorage.getItem('experiment_session_backup') || 'null');
+
+      let allData = [...queue];
+
+      // sessionBackup의 clientLogs도 추가
+      if (sessionBackup && sessionBackup.clientLogs) {
+        allData = [...allData, ...sessionBackup.clientLogs];
+      }
+
+      if (allData.length === 0) {
+        document.getElementById('uploadStatus').innerHTML =
+          '<div class="status error">업로드할 데이터가 없습니다!</div>';
+        return;
+      }
+
+      document.getElementById('uploadStatus').innerHTML =
+        `<div class="status info">업로드 중... (${allData.length}개)</div>`;
+
+      try {
+        const CHUNK = 50;
+        let uploaded = 0;
+
+        for (let i = 0; i < allData.length; i += CHUNK) {
+          const slice = allData.slice(i, i + CHUNK);
+
+          const { error } = await window.supabaseClient
+            .from('trial_logs')
+            .upsert(slice, {
+              onConflict: 'participant_id,block_idx,trial_idx',
+              ignoreDuplicates: true,
+            });
+
+          if (error) throw error;
+
+          uploaded += slice.length;
+          document.getElementById('uploadStatus').innerHTML =
+            `<div class="status info">업로드 중... (${uploaded}/${allData.length})</div>`;
+        }
+
+        document.getElementById('uploadStatus').innerHTML =
+          `<div class="status success">✅ ${uploaded}개 데이터 업로드 완료!<br>이제 Supabase에서 확인할 수 있습니다.</div>`;
+
+        // 성공 시 큐 비우기
+        localStorage.setItem('triallogs_offline_v1', '[]');
+
+      } catch (error) {
+        document.getElementById('uploadStatus').innerHTML =
+          `<div class="status error">❌ 업로드 실패: ${error.message}<br><br>
+          <strong>가능한 원인:</strong><br>
+          1. Supabase 마이그레이션이 실행되지 않음<br>
+          2. RLS 정책 문제<br>
+          3. API 키 설정 오류<br><br>
+          <strong>해결 방법:</strong><br>
+          - supabase_migration_fixed.sql을 Supabase SQL Editor에서 실행하세요</div>`;
+      }
+    };
+
+    window.clearQueue = function() {
+      if (confirm('정말로 오프라인 큐를 비우시겠습니까?')) {
+        localStorage.setItem('triallogs_offline_v1', '[]');
+        document.getElementById('queueStatus').innerHTML =
+          '<div class="status success">큐가 비워졌습니다.</div>';
+        document.getElementById('uploadBtn').disabled = true;
+      }
+    };
+
+    window.previewData = function() {
+      const queue = JSON.parse(localStorage.getItem('triallogs_offline_v1') || '[]');
+      const sessionBackup = JSON.parse(localStorage.getItem('experiment_session_backup') || 'null');
+
+      let allData = [...queue];
+      if (sessionBackup && sessionBackup.clientLogs) {
+        allData = [...allData, ...sessionBackup.clientLogs];
+      }
+
+      if (allData.length === 0) {
+        document.getElementById('dataPreview').innerHTML =
+          '<div class="status error">미리볼 데이터가 없습니다.</div>';
+        return;
+      }
+
+      const preview = allData.slice(0, 5);
+      document.getElementById('dataPreview').innerHTML =
+        `<p style="margin: 10px 0; color: #a0b3c5;">처음 5개 데이터 (총 ${allData.length}개):</p>
+        <pre>${JSON.stringify(preview, null, 2)}</pre>`;
+    };
+
+    // 페이지 로드 시 자동으로 큐 확인
+    window.onload = function() {
+      checkQueue();
+    };
+  </script>
+</body>
+</html>

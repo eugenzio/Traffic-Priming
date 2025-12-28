@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Viewer - Gap Acceptance Experiment</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0b0f14;
+      color: #ecf2f8;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      color: #7aa2ff;
+    }
+
+    .info {
+      background: #121821;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .info h2 {
+      font-size: 18px;
+      margin-bottom: 10px;
+      color: #a0b3c5;
+    }
+
+    .info p {
+      line-height: 1.6;
+      color: #d5e0ea;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: #121821;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 15px;
+    }
+
+    .stat-card h3 {
+      font-size: 14px;
+      color: #a0b3c5;
+      margin-bottom: 5px;
+    }
+
+    .stat-card .value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #7aa2ff;
+    }
+
+    button {
+      background: #7aa2ff;
+      color: #0b0f14;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+
+    button:hover {
+      background: #5a88e5;
+    }
+
+    button.secondary {
+      background: #2a3441;
+      color: #ecf2f8;
+    }
+
+    button.secondary:hover {
+      background: #3a4451;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #121821;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-top: 20px;
+    }
+
+    thead {
+      background: #1a2230;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 13px;
+    }
+
+    th {
+      color: #a0b3c5;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+    }
+
+    td {
+      color: #d5e0ea;
+    }
+
+    tr:hover {
+      background: rgba(122, 162, 255, 0.05);
+    }
+
+    .error-risky {
+      color: #ff6b6b;
+      font-weight: bold;
+    }
+
+    .error-conservative {
+      color: #ffa500;
+      font-weight: bold;
+    }
+
+    .correct {
+      color: #51cf66;
+    }
+
+    .group-A {
+      color: #ff6b6b;
+      font-weight: bold;
+    }
+
+    .group-B {
+      color: #ffa500;
+      font-weight: bold;
+    }
+
+    .group-C {
+      color: #7aa2ff;
+      font-weight: bold;
+    }
+
+    pre {
+      background: #0a0e13;
+      padding: 15px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 12px;
+      line-height: 1.5;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .no-data {
+      text-align: center;
+      padding: 40px;
+      color: #a0b3c5;
+      font-size: 18px;
+    }
+
+    .filter-section {
+      background: #121821;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+
+    .filter-section label {
+      color: #a0b3c5;
+      margin-right: 10px;
+      font-size: 14px;
+    }
+
+    .filter-section select {
+      background: #0b0f14;
+      color: #ecf2f8;
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 14px;
+      margin-right: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📊 Data Viewer - Gap Acceptance Experiment</h1>
+
+    <div class="info">
+      <h2>ℹ️ 사용 방법</h2>
+      <p>
+        <strong>1.</strong> 실험을 진행하세요 (http://localhost:5175/)<br>
+        <strong>2.</strong> 이 페이지에서 "새로고침" 버튼을 클릭하세요<br>
+        <strong>3.</strong> 수집된 데이터를 실시간으로 확인할 수 있습니다<br>
+        <strong>4.</strong> CSV로 다운로드하거나 JSON으로 복사할 수 있습니다
+      </p>
+    </div>
+
+    <div class="stats" id="stats"></div>
+
+    <div style="margin-bottom: 20px;">
+      <button onclick="loadData()">🔄 새로고침</button>
+      <button onclick="downloadCSV()" class="secondary">📥 CSV 다운로드</button>
+      <button onclick="copyJSON()" class="secondary">📋 JSON 복사</button>
+      <button onclick="clearData()" class="secondary" style="background: #b42318; color: white;">🗑️ 데이터 삭제</button>
+    </div>
+
+    <div class="filter-section">
+      <label>필터:</label>
+      <select id="filterGroup" onchange="applyFilters()">
+        <option value="">모든 그룹</option>
+        <option value="A">Group A (Urgency)</option>
+        <option value="B">Group B (Safety)</option>
+        <option value="C">Group C (Control)</option>
+      </select>
+
+      <select id="filterError" onchange="applyFilters()">
+        <option value="">모든 응답</option>
+        <option value="correct_go">Correct Go</option>
+        <option value="correct_nogo">Correct No-Go</option>
+        <option value="risky_error">Risky Error</option>
+        <option value="conservative_error">Conservative Error</option>
+      </select>
+
+      <select id="filterDevice" onchange="applyFilters()">
+        <option value="">모든 기기</option>
+        <option value="desktop">Desktop</option>
+        <option value="tablet">Tablet</option>
+        <option value="mobile">Mobile</option>
+      </select>
+    </div>
+
+    <div id="tableContainer"></div>
+  </div>
+
+  <script>
+    let allData = [];
+    let filteredData = [];
+
+    function loadData() {
+      try {
+        const session = JSON.parse(localStorage.getItem('experiment_session_backup'));
+
+        if (!session || !session.clientLogs || session.clientLogs.length === 0) {
+          document.getElementById('tableContainer').innerHTML =
+            '<div class="no-data">❌ 데이터가 없습니다. 먼저 실험을 진행해주세요!</div>';
+          document.getElementById('stats').innerHTML = '';
+          return;
+        }
+
+        allData = session.clientLogs;
+        filteredData = allData;
+
+        updateStats();
+        applyFilters();
+
+      } catch (error) {
+        console.error('Error loading data:', error);
+        document.getElementById('tableContainer').innerHTML =
+          '<div class="no-data">❌ 데이터 로딩 실패: ' + error.message + '</div>';
+      }
+    }
+
+    function updateStats() {
+      const participant = JSON.parse(localStorage.getItem('experiment_session_backup')).participant;
+
+      const stats = {
+        total: allData.length,
+        correct: allData.filter(d => d.correct === 1).length,
+        avgRT: Math.round(allData.reduce((sum, d) => sum + d.rt_ms, 0) / allData.length),
+        riskyErrors: allData.filter(d => d.error_type === 'risky_error').length,
+        conservativeErrors: allData.filter(d => d.error_type === 'conservative_error').length,
+        primingGroup: participant?.priming_group || 'N/A',
+        browser: allData[0]?.browser || 'N/A',
+        deviceType: allData[0]?.device_type || 'N/A'
+      };
+
+      document.getElementById('stats').innerHTML = `
+        <div class="stat-card">
+          <h3>Total Trials</h3>
+          <div class="value">${stats.total}</div>
+        </div>
+        <div class="stat-card">
+          <h3>Accuracy</h3>
+          <div class="value">${Math.round(stats.correct / stats.total * 100)}%</div>
+        </div>
+        <div class="stat-card">
+          <h3>Avg RT</h3>
+          <div class="value">${stats.avgRT}ms</div>
+        </div>
+        <div class="stat-card">
+          <h3>Priming Group</h3>
+          <div class="value group-${stats.primingGroup}">${stats.primingGroup}</div>
+        </div>
+        <div class="stat-card">
+          <h3>Risky Errors</h3>
+          <div class="value error-risky">${stats.riskyErrors}</div>
+        </div>
+        <div class="stat-card">
+          <h3>Conservative Errors</h3>
+          <div class="value error-conservative">${stats.conservativeErrors}</div>
+        </div>
+        <div class="stat-card">
+          <h3>Browser</h3>
+          <div class="value" style="font-size: 18px;">${stats.browser}</div>
+        </div>
+        <div class="stat-card">
+          <h3>Device</h3>
+          <div class="value" style="font-size: 18px;">${stats.deviceType}</div>
+        </div>
+      `;
+    }
+
+    function applyFilters() {
+      const groupFilter = document.getElementById('filterGroup').value;
+      const errorFilter = document.getElementById('filterError').value;
+      const deviceFilter = document.getElementById('filterDevice').value;
+
+      filteredData = allData.filter(d => {
+        if (groupFilter && d.priming_group !== groupFilter) return false;
+        if (errorFilter && d.error_type !== errorFilter) return false;
+        if (deviceFilter && d.device_type !== deviceFilter) return false;
+        return true;
+      });
+
+      renderTable();
+    }
+
+    function renderTable() {
+      if (filteredData.length === 0) {
+        document.getElementById('tableContainer').innerHTML =
+          '<div class="no-data">필터 조건에 맞는 데이터가 없습니다.</div>';
+        return;
+      }
+
+      const html = `
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Group</th>
+              <th>Error Type</th>
+              <th>Choice</th>
+              <th>Correct</th>
+              <th>RT (ms)</th>
+              <th>Trials Since Priming</th>
+              <th>Previous Correct</th>
+              <th>Browser</th>
+              <th>Device</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filteredData.map((d, i) => `
+              <tr>
+                <td>${d.trial_number_global || i + 1}</td>
+                <td class="group-${d.priming_group}">${d.priming_group || '-'}</td>
+                <td class="${d.error_type?.includes('risky') ? 'error-risky' : d.error_type?.includes('conservative') ? 'error-conservative' : 'correct'}">
+                  ${d.error_type || '-'}
+                </td>
+                <td>${d.choice === 'turn_left' ? '← Turn' : 'Space Wait'}</td>
+                <td class="${d.correct ? 'correct' : 'error-risky'}">${d.correct ? '✓' : '✗'}</td>
+                <td>${d.rt_ms}</td>
+                <td>${d.trials_since_priming ?? '-'}</td>
+                <td>${d.previous_trial_correct === 1 ? '✓' : d.previous_trial_correct === 0 ? '✗' : '-'}</td>
+                <td>${d.browser || '-'}</td>
+                <td>${d.device_type || '-'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+
+      document.getElementById('tableContainer').innerHTML = html;
+    }
+
+    function downloadCSV() {
+      if (allData.length === 0) {
+        alert('데이터가 없습니다!');
+        return;
+      }
+
+      const headers = [
+        'participant_id', 'age', 'gender', 'priming_group',
+        'trial_number_global', 'error_type', 'trials_since_priming',
+        'time_since_priming_ms', 'previous_trial_correct',
+        'choice', 'correct', 'rt_ms', 'signal', 'oncoming_car_ttc',
+        'pedestrian', 'browser', 'os', 'device_type'
+      ];
+
+      const csv = [
+        headers.join(','),
+        ...allData.map(d => headers.map(h => d[h] ?? '').join(','))
+      ].join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `experiment-data-${Date.now()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function copyJSON() {
+      if (allData.length === 0) {
+        alert('데이터가 없습니다!');
+        return;
+      }
+
+      const json = JSON.stringify(allData, null, 2);
+      navigator.clipboard.writeText(json).then(() => {
+        alert('JSON 데이터가 클립보드에 복사되었습니다!');
+      });
+    }
+
+    function clearData() {
+      if (confirm('정말로 모든 데이터를 삭제하시겠습니까?')) {
+        localStorage.removeItem('experiment_session_backup');
+        allData = [];
+        filteredData = [];
+        loadData();
+        alert('데이터가 삭제되었습니다.');
+      }
+    }
+
+    // 페이지 로드 시 자동으로 데이터 불러오기
+    window.onload = loadData;
+  </script>
+</body>
+</html>

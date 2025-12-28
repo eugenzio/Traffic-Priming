@@ -69,6 +69,11 @@ export interface Participant {
   learners_permit: boolean;
   region_ga: 'Metro Atlanta' | 'North Georgia' | 'Middle Georgia' | 'South Georgia' | 'Coastal Georgia' | 'Outside of Georgia';
   county_ga: CountyGA; // REQUIRED
+  priming_group?: 'A' | 'B' | 'C'; // Between-subjects group assignment
+  // Driving experience (for research analysis)
+  years_driving?: number;
+  weekly_driving_hours?: number;
+  accident_count_5years?: number;
 }
 
 export interface LogRow {
@@ -79,6 +84,7 @@ export interface LogRow {
   learners_permit: boolean;
   region_ga: string;
   county_ga: CountyGA;
+  priming_group?: 'A' | 'B' | 'C'; // Between-subjects group assignment
   block_idx: number;
   prime_type: PrimeType;
   trial_idx: number;
@@ -99,6 +105,15 @@ export interface LogRow {
   prime_id?: string;
   prime_block_index?: number | null;
   is_primed?: boolean;
+  // Research analysis fields
+  error_type?: 'conservative_error' | 'risky_error' | 'correct_go' | 'correct_nogo';
+  trial_number_global?: number;
+  trials_since_priming?: number;
+  time_since_priming_ms?: number;
+  previous_trial_correct?: 0 | 1;
+  browser?: string;
+  os?: string;
+  device_type?: 'desktop' | 'tablet' | 'mobile';
 }
 
 export interface ExperimentState {

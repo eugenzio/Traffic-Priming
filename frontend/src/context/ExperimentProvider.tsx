@@ -12,6 +12,7 @@ interface ExperimentContext {
   deviceInfo: DeviceInfo | null
   sessionMetadata: SessionMetadata
   setParticipant: (p: Participant) => void
+  setSessionMetadata: (metadata: SessionMetadata) => void
   addLog: (row: Omit<LogRow, 'created_at'>) => void
   submitLog: (row: Omit<LogRow, 'created_at'>) => Promise<void>
   exportData: () => Promise<void>
@@ -36,6 +37,7 @@ interface SessionMetadata {
   startTime: string
   endTime: string | null
   totalDurationMs: number
+  primingShown: boolean
 }
 
 const ExperimentCtx = createContext<ExperimentContext | null>(null)
@@ -87,7 +89,8 @@ export const ExperimentProvider: React.FC<{
     sessionId: savedSession?.sessionMetadata?.sessionId || `session_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
     startTime: savedSession?.sessionMetadata?.startTime || new Date().toISOString(),
     endTime: null,
-    totalDurationMs: 0
+    totalDurationMs: 0,
+    primingShown: savedSession?.sessionMetadata?.primingShown || false
   }))
 
   // Augment trials with prime design on mount
@@ -176,11 +179,13 @@ export const ExperimentProvider: React.FC<{
   function buildCSV(rows: LogRow[]) {
     const HEADER = [
       'participant_id','age','gender','drivers_license','learners_permit',
-      'region_ga','county_ga','block_idx','prime_type','trial_idx','scene_id',
+      'region_ga','county_ga','priming_group','block_idx','prime_type','trial_idx','scene_id',
       'signal','oncoming_car_ttc','pedestrian','choice','correct','rt_ms',
       'displayed_at_ms','responded_at_ms','focus_lost','seed','created_at',
       'prime_condition','prime_id','prime_block_index','is_primed',
-      'rt_outlier','rt_too_fast','rt_too_slow','is_attention_check'
+      'rt_outlier','rt_too_fast','rt_too_slow','is_attention_check',
+      'error_type','trial_number_global','trials_since_priming','time_since_priming_ms',
+      'previous_trial_correct','browser','os','device_type'
     ];
     const body = rows.map(r =>
       HEADER.map(k => (r as any)[k] ?? '').join(',')
@@ -220,7 +225,8 @@ export const ExperimentProvider: React.FC<{
       sessionId: `session_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
       startTime: new Date().toISOString(),
       endTime: null,
-      totalDurationMs: 0
+      totalDurationMs: 0,
+      primingShown: false
     });
     localStorage.removeItem(SESSION_STORAGE_KEY);
   }
@@ -251,14 +257,16 @@ export const ExperimentProvider: React.FC<{
 
   const exportLocalCSV = () => {
     if (logs.length === 0) return
-    
+
     const headers = [
-      'participant_id', 'age', 'gender', 'drivers_license', 'learners_permit', 'region_ga', 'county_ga',
-      'block_idx', 'prime_type', 'trial_idx', 'scene_id', 'signal', 
+      'participant_id', 'age', 'gender', 'drivers_license', 'learners_permit', 'region_ga', 'county_ga', 'priming_group',
+      'block_idx', 'prime_type', 'trial_idx', 'scene_id', 'signal',
       'oncoming_car_ttc', 'pedestrian', 'choice', 'correct', 'rt_ms',
-      'displayed_at_ms', 'responded_at_ms', 'focus_lost', 'seed', 'created_at'
+      'displayed_at_ms', 'responded_at_ms', 'focus_lost', 'seed', 'created_at',
+      'error_type', 'trial_number_global', 'trials_since_priming', 'time_since_priming_ms',
+      'previous_trial_correct', 'browser', 'os', 'device_type'
     ]
-    
+
     const csvContent = [
       headers.join(','),
       ...logs.map(log => [
@@ -269,6 +277,7 @@ export const ExperimentProvider: React.FC<{
         log.learners_permit ? 1 : 0,
         log.region_ga,
         log.county_ga,
+        log.priming_group || '',
         log.block_idx,
         log.prime_type,
         log.trial_idx,
@@ -283,7 +292,15 @@ export const ExperimentProvider: React.FC<{
         log.responded_at_ms,
         log.focus_lost,
         log.seed,
-        new Date().toISOString()
+        new Date().toISOString(),
+        log.error_type || '',
+        log.trial_number_global ?? '',
+        log.trials_since_priming ?? '',
+        log.time_since_priming_ms ?? '',
+        log.previous_trial_correct ?? '',
+        log.browser || '',
+        log.os || '',
+        log.device_type || ''
       ].join(','))
     ].join('\n')
     
@@ -305,6 +322,7 @@ export const ExperimentProvider: React.FC<{
     logs,
     deviceInfo,
     sessionMetadata,
+    setSessionMetadata,
     addLog,
     submitLog,
     exportData,

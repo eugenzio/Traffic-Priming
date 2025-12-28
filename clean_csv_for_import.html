@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSV 정리 도구</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0b0f14;
+      color: #ecf2f8;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      color: #7aa2ff;
+    }
+
+    .card {
+      background: #121821;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .info {
+      background: rgba(122, 162, 255, 0.1);
+      border: 1px solid rgba(122, 162, 255, 0.3);
+      padding: 15px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      color: #7aa2ff;
+    }
+
+    button {
+      background: #7aa2ff;
+      color: #0b0f14;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+
+    button:hover {
+      background: #5a88e5;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .file-label {
+      background: #7aa2ff;
+      color: #0b0f14;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-block;
+      margin-bottom: 10px;
+    }
+
+    .file-label:hover {
+      background: #5a88e5;
+    }
+
+    pre {
+      background: #0a0e13;
+      padding: 15px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 12px;
+      line-height: 1.5;
+      border: 1px solid rgba(255,255,255,0.1);
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .status {
+      padding: 15px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-weight: 600;
+    }
+
+    .status.success {
+      background: rgba(81, 207, 102, 0.1);
+      border: 1px solid rgba(81, 207, 102, 0.3);
+      color: #51cf66;
+    }
+
+    .status.error {
+      background: rgba(255, 107, 107, 0.1);
+      border: 1px solid rgba(255, 107, 107, 0.3);
+      color: #ff6b6b;
+    }
+
+    .columns-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .column-item {
+      background: #0a0e13;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    .column-item.removed {
+      color: #ff6b6b;
+      text-decoration: line-through;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧹 CSV 정리 도구</h1>
+
+    <div class="card">
+      <div class="info">
+        이 도구는 CSV 파일에서 Supabase에 없는 컬럼들을 자동으로 제거합니다.<br>
+        <strong>제거될 컬럼:</strong> prime_condition, prime_id, prime_block_index, is_primed, rt_outlier, rt_too_fast, rt_too_slow, is_attention_check
+      </div>
+
+      <h2 style="margin-bottom: 15px; color: #a0b3c5;">1️⃣ CSV 파일 선택</h2>
+      <label for="csvFile" class="file-label">📁 CSV 파일 선택</label>
+      <input type="file" id="csvFile" accept=".csv" onchange="loadCSV(event)">
+      <div id="fileStatus"></div>
+    </div>
+
+    <div class="card" id="previewCard" style="display: none;">
+      <h2 style="margin-bottom: 15px; color: #a0b3c5;">2️⃣ 컬럼 미리보기</h2>
+      <div id="columnsPreview"></div>
+    </div>
+
+    <div class="card" id="downloadCard" style="display: none;">
+      <h2 style="margin-bottom: 15px; color: #a0b3c5;">3️⃣ 정리된 CSV 다운로드</h2>
+      <button onclick="downloadCleanedCSV()">📥 정리된 CSV 다운로드</button>
+      <div id="downloadStatus"></div>
+    </div>
+  </div>
+
+  <script>
+    let originalCSV = '';
+    let cleanedCSV = '';
+    let fileName = '';
+
+    const COLUMNS_TO_REMOVE = [
+      'prime_condition',
+      'prime_id',
+      'prime_block_index',
+      'is_primed',
+      'rt_outlier',
+      'rt_too_fast',
+      'rt_too_slow',
+      'is_attention_check'
+    ];
+
+    function loadCSV(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      fileName = file.name;
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+        originalCSV = e.target.result;
+        processCSV();
+      };
+
+      reader.readAsText(file);
+    }
+
+    function processCSV() {
+      const lines = originalCSV.split('\n');
+      if (lines.length === 0) {
+        document.getElementById('fileStatus').innerHTML =
+          '<div class="status error">❌ CSV 파일이 비어있습니다.</div>';
+        return;
+      }
+
+      // Parse header
+      const header = lines[0].split(',').map(col => col.trim());
+
+      // Find columns to keep
+      const columnsToKeep = header.filter(col => !COLUMNS_TO_REMOVE.includes(col));
+      const removedColumns = header.filter(col => COLUMNS_TO_REMOVE.includes(col));
+
+      // Get column indices to keep
+      const indicesToKeep = columnsToKeep.map(col => header.indexOf(col));
+
+      // Build cleaned CSV
+      const cleanedLines = lines.map(line => {
+        const values = line.split(',');
+        return indicesToKeep.map(idx => values[idx]).join(',');
+      });
+
+      cleanedCSV = cleanedLines.join('\n');
+
+      // Show preview
+      document.getElementById('fileStatus').innerHTML =
+        `<div class="status success">✅ CSV 파일 로드 완료: ${fileName}</div>`;
+
+      document.getElementById('previewCard').style.display = 'block';
+      document.getElementById('downloadCard').style.display = 'block';
+
+      let previewHTML = `
+        <p style="color: #a0b3c5; margin-bottom: 10px;">
+          <strong>원본 컬럼 수:</strong> ${header.length} →
+          <strong>정리 후:</strong> ${columnsToKeep.length}
+          (${removedColumns.length}개 제거됨)
+        </p>
+        <div class="columns-list">
+      `;
+
+      header.forEach(col => {
+        const isRemoved = COLUMNS_TO_REMOVE.includes(col);
+        previewHTML += `<div class="column-item ${isRemoved ? 'removed' : ''}">
+          ${isRemoved ? '❌' : '✅'} ${col}
+        </div>`;
+      });
+
+      previewHTML += '</div>';
+      document.getElementById('columnsPreview').innerHTML = previewHTML;
+    }
+
+    function downloadCleanedCSV() {
+      if (!cleanedCSV) {
+        document.getElementById('downloadStatus').innerHTML =
+          '<div class="status error">❌ 먼저 CSV 파일을 선택하세요.</div>';
+        return;
+      }
+
+      const blob = new Blob([cleanedCSV], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+
+      const cleanedFileName = fileName.replace('.csv', '_cleaned.csv');
+      link.href = url;
+      link.download = cleanedFileName;
+      link.click();
+
+      URL.revokeObjectURL(url);
+
+      document.getElementById('downloadStatus').innerHTML =
+        `<div class="status success">✅ 다운로드 완료: ${cleanedFileName}<br><br>
+        이제 Supabase에 업로드할 수 있습니다!</div>`;
+    }
+  </script>
+</body>
+</html>

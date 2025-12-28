@@ -5,7 +5,7 @@ import PreSurveyGuide from './routes/PreSurveyGuide'
 import PrimeInterstitial from './components/PrimeInterstitial'
 import TrialScreen from './components/TrialScreen'
 import PracticeTrialScreen from './components/PracticeTrialScreen'
-import ReadyScreen from './components/ReadyScreen'
+import PrimingScreen from './components/PrimingScreen'
 import FeedbackSurvey from './components/FeedbackSurvey'
 import ResultScreen from './components/ResultScreen'
 import { SectionHeader, SummaryTable, ExportButtons, Notice } from './components/ResearchUI'
@@ -38,16 +38,29 @@ function computeProgress(
   return { total, completedBefore, currentIndex, percent, uiBlockNumber };
 }
 
-type Phase = 'start' | 'guide' | 'practice' | 'ready' | 'interstitial' | 'trial' | 'feedback' | 'done'
+type Phase = 'start' | 'guide' | 'practice' | 'priming' | 'interstitial' | 'trial' | 'feedback' | 'done'
 
 export default function App() {
-  const { blocks, sessionMetadata } = useExperiment()
+  const { blocks, sessionMetadata, participant, setParticipant, setSessionMetadata } = useExperiment()
   const prefersReducedMotion = useReducedMotion()
   const [phase, setPhase] = useState<Phase>('start')
   const [bi, setBi] = useState(0) // index in 'sequence'
   const [ti, setTi] = useState(0) // trial index in current block
   const [pi, setPi] = useState(0) // practice trial index (0-2)
   const [feedbackData, setFeedbackData] = useState<any>(null)
+
+  // Random group assignment function for between-subjects priming
+  const assignPrimingGroup = () => {
+    if (!participant?.priming_group) {
+      const groups: ('A' | 'B' | 'C')[] = ['A', 'B', 'C'];
+      const randomGroup = groups[Math.floor(Math.random() * 3)];
+      setParticipant({
+        ...participant!,
+        priming_group: randomGroup
+      });
+      console.log('[Priming] Assigned to group:', randomGroup);
+    }
+  }
 
   // Generate practice trials
   const practiceTrials = useMemo(() => generatePracticeTrials(), [])
@@ -129,25 +142,31 @@ export default function App() {
               if (pi + 1 < practiceTrials.length) {
                 setPi(pi + 1);
               } else {
-                // Practice complete, show ready screen
-                setPhase('ready');
+                // Practice complete - check if priming already shown
+                if (!sessionMetadata.primingShown) {
+                  assignPrimingGroup();
+                  setSessionMetadata({ ...sessionMetadata, primingShown: true });
+                  setPhase('priming');
+                } else {
+                  // Skip priming, go directly to trial
+                  setBi(0);
+                  setTi(0);
+                  setPhase('trial');
+                }
               }
             }}
           />
         )}
 
-        {/* Ready: Confirmation before starting real experiment */}
-        {phase === 'ready' && (
-          <ReadyScreen
-            key="ready"
-            onBegin={() => {
+        {/* Priming: Show between-subjects scenario after practice */}
+        {phase === 'priming' && participant?.priming_group && (
+          <PrimingScreen
+            key="priming"
+            group={participant.priming_group}
+            onContinue={() => {
               setBi(0);
               setTi(0);
               setPhase('trial');
-            }}
-            onBack={() => {
-              setPi(0);
-              setPhase('practice');
             }}
           />
         )}

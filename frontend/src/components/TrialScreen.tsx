@@ -51,7 +51,7 @@ export default function TrialScreen({
   totalTrials: number
   progressPercent: number
 }) {
-  const { submitLog, participant, pushLocalLog } = useExperiment()
+  const { submitLog, participant, pushLocalLog, clientLogs, sessionMetadata, deviceInfo } = useExperiment()
   const rtStart = useRef<number | null>(null)
   const [responding, setResponding] = useState(false) // Prevent double-tap
 
@@ -107,6 +107,39 @@ export default function TrialScreen({
     // Check if this is an attention check trial
     const isAttention = isAttentionCheck(trial);
 
+    // Calculate error type for research analysis
+    const isCorrect = choice === correctChoice;
+    const shouldGo = correctChoice === 'turn_left';
+    const didGo = choice === 'turn_left';
+    let errorType: 'conservative_error' | 'risky_error' | 'correct_go' | 'correct_nogo';
+    if (isCorrect) {
+      errorType = didGo ? 'correct_go' : 'correct_nogo';
+    } else {
+      // Error occurred
+      if (shouldGo && !didGo) {
+        errorType = 'conservative_error'; // Should have gone but waited (Type II)
+      } else {
+        errorType = 'risky_error'; // Should have waited but went (Type I)
+      }
+    }
+
+    // Calculate previous trial correct (sequential effects)
+    const previousTrialCorrect = clientLogs.length > 0
+      ? clientLogs[clientLogs.length - 1].correct
+      : undefined;
+
+    // Calculate trials since priming (temporal effects)
+    const primingTrialIndex = clientLogs.findIndex(log => log.scene_id && !log.scene_id.startsWith('practice'));
+    const trialsSincePriming = primingTrialIndex >= 0 ? clientLogs.length - primingTrialIndex : undefined;
+
+    // Calculate time since priming
+    const primingTime = sessionMetadata.primingShown && sessionMetadata.startTime
+      ? new Date(sessionMetadata.startTime).getTime()
+      : undefined;
+    const timeSincePrimingMs = primingTime
+      ? Date.now() - primingTime
+      : undefined;
+
     const logRow = {
         participant_id: participant?.participant_id || 'anon',
         age: (participant?.age ?? 0) as number,
@@ -115,6 +148,7 @@ export default function TrialScreen({
         learners_permit: (participant?.learners_permit ?? false) as boolean,
         region_ga: ((participant as any)?.region_ga ?? 'Outside of Georgia') as string,
         county_ga: ((participant as any)?.county_ga ?? 'Outside of Georgia') as any,
+        priming_group: participant?.priming_group,
 
         block_idx: blockIdx,
         prime_type: block.prime_type,
@@ -141,7 +175,17 @@ export default function TrialScreen({
         rt_outlier: isOutlier ? 1 : 0,
         rt_too_fast: isTooFast ? 1 : 0,
         rt_too_slow: isTooSlow ? 1 : 0,
-        is_attention_check: isAttention ? 1 : 0
+        is_attention_check: isAttention ? 1 : 0,
+
+        // Research analysis fields
+        error_type: errorType,
+        trial_number_global: currentTotalIndex,
+        trials_since_priming: trialsSincePriming,
+        time_since_priming_ms: timeSincePrimingMs,
+        previous_trial_correct: previousTrialCorrect,
+        browser: deviceInfo?.browser,
+        os: deviceInfo?.os,
+        device_type: deviceInfo?.deviceType,
       } as any;
     await submitLog(logRow)
 
