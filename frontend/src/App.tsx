@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import ConsentScreen from './components/ConsentScreen'
 import StartScreen from './components/StartScreen'
 import PreSurveyGuide from './routes/PreSurveyGuide'
 import PrimeInterstitial from './components/PrimeInterstitial'
@@ -38,12 +39,12 @@ function computeProgress(
   return { total, completedBefore, currentIndex, percent, uiBlockNumber };
 }
 
-type Phase = 'start' | 'guide' | 'practice' | 'priming' | 'interstitial' | 'trial' | 'feedback' | 'done'
+type Phase = 'consent' | 'start' | 'guide' | 'practice' | 'priming' | 'interstitial' | 'trial' | 'feedback' | 'done'
 
 export default function App() {
   const { blocks, sessionMetadata, participant, setParticipant, setSessionMetadata } = useExperiment()
   const prefersReducedMotion = useReducedMotion()
-  const [phase, setPhase] = useState<Phase>('start')
+  const [phase, setPhase] = useState<Phase>('consent')
   const [bi, setBi] = useState(0) // index in 'sequence'
   const [ti, setTi] = useState(0) // trial index in current block
   const [pi, setPi] = useState(0) // practice trial index (0-2)
@@ -112,6 +113,17 @@ export default function App() {
   return (
     <div className="app">
       <AnimatePresence mode="wait">
+        {/* Consent: Informed consent screen */}
+        {phase === 'consent' && (
+          <ConsentScreen
+            key="consent"
+            onAgree={() => setPhase('start')}
+            onDecline={() => {
+              alert('실험 참여에 동의하지 않으셨습니다. 브라우저를 닫아주세요.\n\nYou have declined to participate. Please close this browser window.');
+            }}
+          />
+        )}
+
         {/* Start: Collect participant info, then show guide */}
         {phase === 'start' && (
           <StartScreen
