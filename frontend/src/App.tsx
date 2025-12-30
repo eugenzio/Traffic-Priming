@@ -119,7 +119,7 @@ export default function App() {
             key="consent"
             onAgree={() => setPhase('start')}
             onDecline={() => {
-              alert('실험 참여에 동의하지 않으셨습니다. 브라우저를 닫아주세요.\n\nYou have declined to participate. Please close this browser window.');
+              alert('You have declined to participate in this study. Please close this browser window.');
             }}
           />
         )}

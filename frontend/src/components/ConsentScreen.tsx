@@ -43,50 +43,50 @@ export default function ConsentScreen({ onAgree, onDecline }: ConsentScreenProps
               const hasScrolledToBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 10
               if (hasScrolledToBottom) setHasRead(true)
             }}>
-              <h2 style={{ marginTop: 0 }}>연구 참여 동의서</h2>
+              <h2 style={{ marginTop: 0 }}>Informed Consent for Research Participation</h2>
 
-              <h3>연구 제목</h3>
-              <p>좌회전 교차로 상황에서의 의사결정 연구</p>
+              <h3>Study Title</h3>
+              <p>Decision-Making in Left-Turn Intersection Scenarios</p>
 
-              <h3>연구 목적</h3>
+              <h3>Purpose of the Study</h3>
               <p>
-                본 연구는 운전자가 좌회전 교차로 상황에서 어떻게 의사결정을 내리는지 이해하기 위한
-                학술 연구입니다. 귀하는 다양한 교통 상황이 제시되며, 각 상황에서 좌회전 또는 대기 중
-                하나를 선택하게 됩니다.
+                This is an academic research study designed to understand how drivers make decisions
+                in left-turn intersection scenarios. You will be presented with various traffic situations
+                and will choose whether to turn left or wait in each scenario.
               </p>
 
-              <h3>연구 절차</h3>
-              <p>본 실험은 다음과 같이 진행됩니다:</p>
+              <h3>Study Procedures</h3>
+              <p>The experiment will proceed as follows:</p>
               <ol>
-                <li>인구통계학적 정보 수집 (연령, 성별, 운전 경험, 거주 지역)</li>
-                <li>실험 안내 및 과제 설명</li>
-                <li>연습 시행 (3회)</li>
-                <li>본 실험 시행 (약 21회)</li>
-                <li>피드백 제공</li>
+                <li>Demographic information collection (age, gender, driving experience, region)</li>
+                <li>Experimental instructions and task explanation</li>
+                <li>Practice trials (3 trials)</li>
+                <li>Main experiment trials (approximately 21 trials)</li>
+                <li>Feedback</li>
               </ol>
-              <p>전체 실험은 약 <strong>10-15분</strong> 소요됩니다.</p>
+              <p>The entire experiment will take approximately <strong>10-15 minutes</strong>.</p>
 
-              <h3>데이터의 익명성 보장</h3>
+              <h3>Data Confidentiality and Anonymity</h3>
               <p>
-                귀하의 개인 식별 정보(이름, 이메일 주소 등)는 수집되지 않습니다.
-                모든 데이터는 익명으로 처리되며, 연구 목적으로만 사용됩니다.
-                수집된 데이터는 안전하게 암호화되어 저장됩니다.
+                No personally identifiable information (name, email address, etc.) will be collected.
+                All data will be processed anonymously and used solely for research purposes.
+                Collected data will be securely encrypted and stored.
               </p>
 
-              <h3>자발적 참여 및 중도 포기 권리</h3>
+              <h3>Voluntary Participation and Right to Withdraw</h3>
               <p>
-                본 연구 참여는 완전히 자발적입니다. 귀하는 언제든지 아무런 불이익 없이
-                실험을 중단할 수 있습니다. 브라우저를 닫으면 실험이 자동으로 종료됩니다.
+                Participation in this study is completely voluntary. You may withdraw from the experiment
+                at any time without penalty. Closing your browser will automatically terminate the experiment.
               </p>
 
-              <h3>연구 책임자 정보</h3>
+              <h3>Principal Investigator Contact Information</h3>
               <p>
-                본 연구에 대해 질문이 있으시면 아래로 연락 주시기 바랍니다:
+                If you have any questions about this study, please contact:
               </p>
               <ul>
-                <li>연구 책임자: [연구자 이름]</li>
-                <li>소속 기관: [대학/연구소 이름]</li>
-                <li>이메일: [연구자 이메일]</li>
+                <li>Principal Investigator: [Researcher Name]</li>
+                <li>Institution: [University/Research Institute]</li>
+                <li>Email: [Researcher Email]</li>
               </ul>
 
               <div style={{
@@ -97,13 +97,13 @@ export default function ConsentScreen({ onAgree, onDecline }: ConsentScreenProps
                 borderLeft: '4px solid var(--accent)'
               }}>
                 <p style={{ margin: 0, fontWeight: 600 }}>
-                  위의 내용을 충분히 읽고 이해하였으며, 본 연구에 자발적으로 참여하는 것에 동의합니다.
+                  I have read and understood the above information and voluntarily agree to participate in this research study.
                 </p>
               </div>
 
               {!hasRead && (
                 <p className="help" style={{ marginTop: 'var(--space-4)', textAlign: 'center', color: 'var(--warning-fg)' }}>
-                  ⬇ 하단까지 스크롤하여 모든 내용을 확인해주세요
+                  ⬇ Please scroll to the bottom to read all content
                 </p>
               )}
             </div>
